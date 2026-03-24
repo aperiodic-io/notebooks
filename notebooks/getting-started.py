@@ -7,17 +7,15 @@
 # **Paste your API key** in the first cell below, then run all cells.
 
 # %%
-import json
-
 try:
-    import js
-    _hash = getattr(js.location, "hash", "") or ""
-    _config = json.loads(_hash[1:]) if _hash.startswith("#") else {}
-except (ImportError, json.JSONDecodeError):
-    _config = {}
+    import marimo as mo
+    _params = mo.query_params
+    API_KEY = _params.get("apiKey", "...")  # Auto-filled in the playground
+    BASE_URL = _params.get("siteUrl", "https://aperiodic.io")
+except Exception:
+    API_KEY = "..."  # Paste your Aperiodic API key here
+    BASE_URL = "https://aperiodic.io"
 
-API_KEY = _config.get("apiKey", "...")  # Auto-filled when running in the playground
-BASE_URL = _config.get("siteUrl", "https://aperiodic.io")
 API_BASE = f"{BASE_URL}/api/v1"
 
 # %%
