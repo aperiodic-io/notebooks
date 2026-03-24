@@ -42,6 +42,11 @@ ax.grid(True, alpha=0.3)
 fig.tight_layout()
 plt.show()
 
+# %% [markdown]
+# ## Order Flow
+#
+# Fetch taker buy/sell volume and compute the net delta.
+
 # %%
 from aperiodic import get_metrics_async
 
