@@ -1,7 +1,7 @@
 [project]
 name = "aperiodic-notebooks"
 version = "0.1.0"
-description = "Interactive marimo notebooks for exploring Aperiodic market data APIs."
+description = "Interactive Python notebooks for exploring Aperiodic market data APIs."
 requires-python = ">=3.11"
 readme = "README.md"
 license = "MIT"
@@ -13,14 +13,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "marimo",
     "aperiodic[pandas]",
     "pyarrow",
     "matplotlib",
 ]
 
 [project.optional-dependencies]
-quality = ["ruff>=0.14.1"]
+notebook = ["jupyter"]
+quality = ["ruff>=0.14.1", "jupytext"]
 
 [tool.ruff]
 target-version = "py311"
@@ -53,3 +53,6 @@ select = [
     "RUF",
 ]
 fixable = ["ALL"]
+
+[tool.jupytext]
+formats = "py:percent,ipynb"
