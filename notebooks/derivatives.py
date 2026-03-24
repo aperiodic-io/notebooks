@@ -4,8 +4,24 @@
 # Explore funding rates, open interest, and basis data for perpetual futures.
 
 # %%
-API_KEY = "..."  # Paste your Aperiodic API key here
-BASE_URL = "https://aperiodic.io"
+try:
+    import micropip
+    await micropip.install(["aperiodic[pandas]", "pyarrow"])
+except ImportError:
+    pass  # Running outside WASM — deps installed via pip
+
+# %%
+import json
+
+try:
+    import js
+    _hash = getattr(js.location, "hash", "") or ""
+    _config = json.loads(_hash[1:]) if _hash.startswith("#") else {}
+except (ImportError, json.JSONDecodeError):
+    _config = {}
+
+API_KEY = _config.get("apiKey", "...")  # Auto-filled when running in the playground
+BASE_URL = _config.get("siteUrl", "https://aperiodic.io")
 API_BASE = f"{BASE_URL}/api/v1"
 
 # %%
