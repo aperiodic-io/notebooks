@@ -6,7 +6,7 @@
 # %%
 try:
     import marimo as mo
-    _params = mo.query_params
+    _params = mo.query_params()
     API_KEY = _params.get("apiKey", "...")  # Auto-filled in the playground
     BASE_URL = _params.get("siteUrl", "https://aperiodic.io")
 except Exception:
