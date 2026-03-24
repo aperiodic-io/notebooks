@@ -7,13 +7,6 @@
 # **Paste your API key** in the first cell below, then run all cells.
 
 # %%
-try:
-    import micropip
-    await micropip.install(["aperiodic[pandas]", "pyarrow"])
-except ImportError:
-    pass  # Running outside WASM — deps installed via pip
-
-# %%
 import json
 
 try:

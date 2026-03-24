@@ -4,13 +4,6 @@
 # Explore funding rates, open interest, and basis data for perpetual futures.
 
 # %%
-try:
-    import micropip
-    await micropip.install(["aperiodic[pandas]", "pyarrow"])
-except ImportError:
-    pass  # Running outside WASM — deps installed via pip
-
-# %%
 import json
 
 try:

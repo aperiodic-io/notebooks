@@ -5,13 +5,6 @@
 # Aperiodic's microstructure metrics.
 
 # %%
-try:
-    import micropip
-    await micropip.install(["aperiodic[pandas]", "pyarrow"])
-except ImportError:
-    pass  # Running outside WASM — deps installed via pip
-
-# %%
 import json
 
 try:
