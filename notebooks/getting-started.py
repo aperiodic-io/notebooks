@@ -12,8 +12,9 @@ BASE_URL = "https://aperiodic.io"
 API_BASE = f"{BASE_URL}/api/v1"
 
 # %%
-import pandas as pd
 from datetime import date
+
+import pandas as pd
 from aperiodic import get_ohlcv_async
 
 df = await get_ohlcv_async(

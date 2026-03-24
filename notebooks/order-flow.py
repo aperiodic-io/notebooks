@@ -10,8 +10,9 @@ BASE_URL = "https://aperiodic.io"
 API_BASE = f"{BASE_URL}/api/v1"
 
 # %%
-import pandas as pd
 from datetime import date
+
+import pandas as pd
 from aperiodic import get_metrics_async
 
 flow = await get_metrics_async(
@@ -90,8 +91,6 @@ plt.show()
 # ### Flow Statistics
 
 # %%
-import numpy as np
-
 stats = {
     "Mean Buy Volume": f"{np.mean(flow['taker_buy_volume']):,.2f}",
     "Mean Sell Volume": f"{np.mean(flow['taker_sell_volume']):,.2f}",

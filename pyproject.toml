@@ -54,5 +54,12 @@ select = [
 ]
 fixable = ["ALL"]
 
+[tool.ruff.lint.per-file-ignores]
+"notebooks/*.py" = [
+    "E402",     # Module-level import not at top of file (expected in notebooks)
+    "F704",     # `await` outside async function (valid in IPython/Jupyter)
+    "PLE1142",  # `await` should be in async function (valid in IPython/Jupyter)
+]
+
 [tool.jupytext]
 formats = "py:percent,ipynb"
