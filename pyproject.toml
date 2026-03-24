@@ -1,0 +1,65 @@
+[project]
+name = "aperiodic-notebooks"
+version = "0.1.0"
+description = "Interactive Python notebooks for exploring Aperiodic market data APIs."
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "aperiodic[pandas]",
+    "pyarrow",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+notebook = ["jupyter"]
+quality = ["ruff>=0.14.1", "jupytext"]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+ignore = [
+    "E501",
+    "PLR2004",
+    "PLR0913",
+]
+select = [
+    "F",
+    "E",
+    "W",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "C4",
+    "DTZ",
+    "ISC",
+    "PIE",
+    "PT",
+    "RET",
+    "SIM",
+    "PD",
+    "PLE",
+    "PLR",
+    "PLW",
+    "RUF",
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"notebooks/*.py" = [
+    "E402",     # Module-level import not at top of file (expected in notebooks)
+    "F704",     # `await` outside async function (valid in IPython/Jupyter)
+    "PLE1142",  # `await` should be in async function (valid in IPython/Jupyter)
+]
+
+[tool.jupytext]
+formats = "py:percent,ipynb"
