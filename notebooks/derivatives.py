@@ -7,8 +7,10 @@
 try:
     import marimo as mo
     _params = mo.query_params()
-    API_KEY = _params.get("apiKey", "...")  # Auto-filled in the playground
     BASE_URL = _params.get("siteUrl", "https://aperiodic.io")
+    # Read API key from cookie (set by parent page on .aperiodic.io domain)
+    from js import document as _doc
+    API_KEY = dict(c.strip().split("=", 1) for c in _doc.cookie.split(";") if "=" in c).get("apiKey", "...")
 except Exception:
     API_KEY = "..."  # Paste your Aperiodic API key here
     BASE_URL = "https://aperiodic.io"
