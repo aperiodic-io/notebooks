@@ -5,17 +5,8 @@
 # Aperiodic's microstructure metrics.
 
 # %%
-try:
-    import marimo as mo
-    _params = mo.query_params()
-    BASE_URL = _params.get("siteUrl", "https://aperiodic.io")
-    # Read API key from cookie (set by parent page on .aperiodic.io domain)
-    from js import document as _doc
-    API_KEY = dict(c.strip().split("=", 1) for c in _doc.cookie.split(";") if "=" in c).get("apiKey", "...")
-except Exception:
-    API_KEY = "..."  # Paste your Aperiodic API key here
-    BASE_URL = "https://aperiodic.io"
-
+API_KEY = "..."  # Paste your Aperiodic API key here
+BASE_URL = "https://aperiodic.io"
 API_BASE = f"{BASE_URL}/api/v1"
 
 # %%
