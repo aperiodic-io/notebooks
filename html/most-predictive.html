@@ -7823,20 +7823,22 @@ a.anchor-link {
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
 <main>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=dff6a323">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=2dc7ef88">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Predicting-Short-Term-Crypto-Returns-with-Market-Microstructure">Predicting Short-Term Crypto Returns with Market Microstructure<a class="anchor-link" href="#Predicting-Short-Term-Crypto-Returns-with-Market-Microstructure">¶</a></h1><p>There's a market microstructure metric that predicts short-term crypto returns surprisingly well.
+<h1 id="Predicting-Short-Term-Crypto-Returns-with-Market-Microstructure">Predicting Short-Term Crypto Returns with Market Microstructure<a class="anchor-link" href="#Predicting-Short-Term-Crypto-Returns-with-Market-Microstructure">¶</a></h1><h1 id=""><a class="anchor-link" href="#">¶</a></h1><p>There's a market microstructure metric that predicts short-term crypto returns surprisingly well.
 Most quants in this space know which one.</p>
 <p>This notebook names it, walks through the methodology, and lets you run the same analysis
-to surface similar signals yourself.</p>
+to surface similar signals yourself.
+Rolling percentile rank is a simple but effective transformation to transform an arbitrary time series into
+a (close to) uniform distribution signal, and can easily work as-is for simplistic backtests as well.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9945f61f">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=676db867">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7868,6 +7870,7 @@ to surface similar signals yourself.</p>
 <span class="n">START_DATE</span> <span class="o">=</span> <span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">365</span><span class="p">)</span>
 <span class="n">END_DATE</span> <span class="o">=</span> <span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span>
 
+<span class="c1"># For demonstration purposes, we'll use only the l2_imbalance metric category.</span>
 <span class="n">METRICS</span> <span class="o">=</span> <span class="p">[</span>
     <span class="c1"># ("basis", "derivative"),</span>
     <span class="c1"># ("funding", "derivative"),</span>
@@ -7986,7 +7989,6 @@ to surface similar signals yourself.</p>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">make_signal</span><span class="p">(</span><span class="n">panel_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">feature</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-    <span class="c1"># Pandas rolling.rank(method='average') is equivalent to Polars rolling_rank</span>
     <span class="n">rank</span> <span class="o">=</span> <span class="n">panel_df</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">rolling</span><span class="p">(</span><span class="n">window</span><span class="p">)</span><span class="o">.</span><span class="n">rank</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">"average"</span><span class="p">)</span>
     <span class="n">signal</span> <span class="o">=</span> <span class="p">((</span><span class="n">rank</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">window</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="mf">2.0</span> <span class="o">-</span> <span class="mf">1.0</span>
     <span class="k">return</span> <span class="n">signal</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
@@ -8027,23 +8029,23 @@ to surface similar signals yourself.</p>
 <div class="jp-OutputArea jp-Cell-outputArea">
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jupyter-widgets jp-OutputArea-output" id="87ab13e0-c9af-4f78-aced-e89d7269f806" tabindex="0">
+<div class="jupyter-widgets jp-OutputArea-output" id="ae7ed91e-0199-4b9d-9f32-7982ac8e93d1" tabindex="0">
 <script type="text/javascript">
-var element = document.getElementById('87ab13e0-c9af-4f78-aced-e89d7269f806');
+var element = document.getElementById('ae7ed91e-0199-4b9d-9f32-7982ac8e93d1');
 </script>
 <script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "001e6083e6da4877bb9a403a5e241091", "version_major": 2, "version_minor": 0}
+{"model_id": "77e03c9110f6485eb8afe3104901145c", "version_major": 2, "version_minor": 0}
 </script>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jupyter-widgets jp-OutputArea-output" id="de67374b-dab8-4410-90cd-b8a4f0a241e1" tabindex="0">
+<div class="jupyter-widgets jp-OutputArea-output" id="fa0fa115-427e-466c-a2c1-4149fcd03371" tabindex="0">
 <script type="text/javascript">
-var element = document.getElementById('de67374b-dab8-4410-90cd-b8a4f0a241e1');
+var element = document.getElementById('fa0fa115-427e-466c-a2c1-4149fcd03371');
 </script>
 <script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "be5cec501b4642f19ce0f9826892c755", "version_major": 2, "version_minor": 0}
+{"model_id": "d11e583478754a42add6ee5bb576afbd", "version_major": 2, "version_minor": 0}
 </script>
 </div>
 </div>
@@ -8101,7 +8103,7 @@ Features: ['imbalance_5', 'imbalance_ratio_5', 'bid_ask_ratio_5', 'imbalance_5_a
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=946e910c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=a390e3c6">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8109,7 +8111,8 @@ Features: ['imbalance_5', 'imbalance_ratio_5', 'bid_ask_ratio_5', 'imbalance_5_a
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">forward_returns</span> <span class="o">=</span> <span class="n">panel</span><span class="p">[</span><span class="s2">"fwd_ret"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># Calculate forward returns, information coefficient, and backtest for each metric and window combination.</span>
+<span class="n">forward_returns</span> <span class="o">=</span> <span class="n">panel</span><span class="p">[</span><span class="s2">"fwd_ret"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
 
 <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">feature_cols</span><span class="p">:</span>
@@ -8190,7 +8193,13 @@ Testing bid_ask_ratio_5 | window 600: 104517 valid observations
 Testing imbalance_5_avg | window 300: 104817 valid observations
 Testing imbalance_5_avg | window 600: 104517 valid observations
 Testing imbalance_5_avg | window 1200: 103917 valid observations
-Testing imbalance_ratio_5_avg | window 100: 105017 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_ratio_5_avg | window 100: 105017 valid observations
 </pre>
 </div>
 </div>
@@ -8198,245 +8207,179 @@ Testing imbalance_ratio_5_avg | window 100: 105017 valid observations
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Testing imbalance_ratio_5_avg | window 300: 104817 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_5_avg | window 600: 104517 valid observations
+Testing imbalance_ratio_5_avg | window 600: 104517 valid observations
 Testing imbalance_ratio_5_avg | window 1200: 103917 valid observations
 Testing bid_ask_ratio_5_avg | window 100: 105017 valid observations
-Testing bid_ask_ratio_5_avg | window 300: 104817 valid observations
-Testing bid_ask_ratio_5_avg | window 600: 104517 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_5_avg | window 1200: 103917 valid observations
+<pre>Testing bid_ask_ratio_5_avg | window 300: 104817 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_10 | window 100: 105017 valid observations
+<pre>Testing bid_ask_ratio_5_avg | window 600: 104517 valid observations
+Testing bid_ask_ratio_5_avg | window 1200: 103917 valid observations
+Testing imbalance_10 | window 100: 105017 valid observations
 Testing imbalance_10 | window 300: 104817 valid observations
 Testing imbalance_10 | window 600: 104517 valid observations
-Testing imbalance_10 | window 1200: 103917 valid observations
-Testing imbalance_ratio_10 | window 100: 105017 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_10 | window 300: 104817 valid observations
+<pre>Testing imbalance_10 | window 1200: 103917 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_10 | window 600: 104517 valid observations
+<pre>Testing imbalance_ratio_10 | window 100: 105017 valid observations
+Testing imbalance_ratio_10 | window 300: 104817 valid observations
+Testing imbalance_ratio_10 | window 600: 104517 valid observations
 Testing imbalance_ratio_10 | window 1200: 103917 valid observations
 Testing bid_ask_ratio_10 | window 100: 105017 valid observations
-Testing bid_ask_ratio_10 | window 300: 104817 valid observations
-Testing bid_ask_ratio_10 | window 600: 104517 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_10 | window 1200: 103917 valid observations
+<pre>Testing bid_ask_ratio_10 | window 300: 104817 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_10_avg | window 100: 105017 valid observations
+<pre>Testing bid_ask_ratio_10 | window 600: 104517 valid observations
+Testing bid_ask_ratio_10 | window 1200: 103917 valid observations
+Testing imbalance_10_avg | window 100: 105017 valid observations
 Testing imbalance_10_avg | window 300: 104817 valid observations
 Testing imbalance_10_avg | window 600: 104517 valid observations
-Testing imbalance_10_avg | window 1200: 103917 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_10_avg | window 1200: 103917 valid observations
 Testing imbalance_ratio_10_avg | window 100: 105017 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_10_avg | window 300: 104817 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_10_avg | window 600: 104517 valid observations
+Testing imbalance_ratio_10_avg | window 300: 104817 valid observations
+Testing imbalance_ratio_10_avg | window 600: 104517 valid observations
 Testing imbalance_ratio_10_avg | window 1200: 103917 valid observations
-Testing bid_ask_ratio_10_avg | window 100: 105017 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing bid_ask_ratio_10_avg | window 100: 105017 valid observations
 Testing bid_ask_ratio_10_avg | window 300: 104817 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_10_avg | window 600: 104517 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_10_avg | window 1200: 103917 valid observations
+Testing bid_ask_ratio_10_avg | window 600: 104517 valid observations
+Testing bid_ask_ratio_10_avg | window 1200: 103917 valid observations
 Testing imbalance_20 | window 100: 105017 valid observations
-Testing imbalance_20 | window 300: 104817 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_20 | window 300: 104817 valid observations
 Testing imbalance_20 | window 600: 104517 valid observations
 Testing imbalance_20 | window 1200: 103917 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_20 | window 100: 105017 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_20 | window 300: 104817 valid observations
+Testing imbalance_ratio_20 | window 100: 105017 valid observations
+Testing imbalance_ratio_20 | window 300: 104817 valid observations
 Testing imbalance_ratio_20 | window 600: 104517 valid observations
-Testing imbalance_ratio_20 | window 1200: 103917 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_ratio_20 | window 1200: 103917 valid observations
 Testing bid_ask_ratio_20 | window 100: 105017 valid observations
 Testing bid_ask_ratio_20 | window 300: 104817 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_20 | window 600: 104517 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_20 | window 1200: 103917 valid observations
+Testing bid_ask_ratio_20 | window 600: 104517 valid observations
+Testing bid_ask_ratio_20 | window 1200: 103917 valid observations
 Testing imbalance_20_avg | window 100: 105017 valid observations
-Testing imbalance_20_avg | window 300: 104817 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_20_avg | window 300: 104817 valid observations
 Testing imbalance_20_avg | window 600: 104517 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_20_avg | window 1200: 103917 valid observations
+Testing imbalance_20_avg | window 1200: 103917 valid observations
 Testing imbalance_ratio_20_avg | window 100: 105017 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_20_avg | window 300: 104817 valid observations
+Testing imbalance_ratio_20_avg | window 300: 104817 valid observations
 Testing imbalance_ratio_20_avg | window 600: 104517 valid observations
-Testing imbalance_ratio_20_avg | window 1200: 103917 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_ratio_20_avg | window 1200: 103917 valid observations
 Testing bid_ask_ratio_20_avg | window 100: 105017 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_20_avg | window 300: 104817 valid observations
+Testing bid_ask_ratio_20_avg | window 300: 104817 valid observations
 Testing bid_ask_ratio_20_avg | window 600: 104517 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_20_avg | window 1200: 103917 valid observations
+Testing bid_ask_ratio_20_avg | window 1200: 103917 valid observations
 Testing imbalance_25 | window 100: 105017 valid observations
-Testing imbalance_25 | window 300: 104817 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_25 | window 300: 104817 valid observations
 Testing imbalance_25 | window 600: 104517 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_25 | window 1200: 103917 valid observations
+Testing imbalance_25 | window 1200: 103917 valid observations
 Testing imbalance_ratio_25 | window 100: 105017 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_25 | window 300: 104817 valid observations
+Testing imbalance_ratio_25 | window 300: 104817 valid observations
 Testing imbalance_ratio_25 | window 600: 104517 valid observations
-Testing imbalance_ratio_25 | window 1200: 103917 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_ratio_25 | window 1200: 103917 valid observations
 Testing bid_ask_ratio_25 | window 100: 105017 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_25 | window 300: 104817 valid observations
+Testing bid_ask_ratio_25 | window 300: 104817 valid observations
 Testing bid_ask_ratio_25 | window 600: 104517 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_25 | window 1200: 103917 valid observations
+Testing bid_ask_ratio_25 | window 1200: 103917 valid observations
 Testing imbalance_25_avg | window 100: 105017 valid observations
-Testing imbalance_25_avg | window 300: 104817 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_25_avg | window 300: 104817 valid observations
 Testing imbalance_25_avg | window 600: 104517 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_25_avg | window 1200: 103917 valid observations
+Testing imbalance_25_avg | window 1200: 103917 valid observations
 Testing imbalance_ratio_25_avg | window 100: 105017 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_25_avg | window 300: 104817 valid observations
+Testing imbalance_ratio_25_avg | window 300: 104817 valid observations
 Testing imbalance_ratio_25_avg | window 600: 104517 valid observations
-Testing imbalance_ratio_25_avg | window 1200: 103917 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_ratio_25_avg | window 1200: 103917 valid observations
 Testing bid_ask_ratio_25_avg | window 100: 105017 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_25_avg | window 300: 104817 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_25_avg | window 600: 104517 valid observations
+Testing bid_ask_ratio_25_avg | window 300: 104817 valid observations
+Testing bid_ask_ratio_25_avg | window 600: 104517 valid observations
 Testing bid_ask_ratio_25_avg | window 1200: 103917 valid observations
                  feature  window  direction  fit_corr     sharpe  \
 10       bid_ask_ratio_5     600          1  0.033408  10.639944   
@@ -8470,7 +8413,23 @@ Testing bid_ask_ratio_25_avg | window 1200: 103917 valid observations
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=6e80e1a6">
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=d21eafd1">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Microstructure-Takeaways">Microstructure Takeaways<a class="anchor-link" href="#Microstructure-Takeaways">¶</a></h2><p>Note that all of the backtests here are net of transaction costs.</p>
+<ul>
+<li>The metric presented here has high turnover and is most predictive on lower timeframes.</li>
+<li>Market microstructure metrics can be used to enhance directional strategies and extend existing signals.</li>
+<li>They can also act as regime filters to help decide when broader trend-following ideas are more or less effective.</li>
+</ul>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=07e220ac">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8527,7 +8486,7 @@ Testing bid_ask_ratio_25_avg | window 1200: 103917 valid observations
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9790ba5f">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=73ac91a0">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8543,19 +8502,17 @@ Testing bid_ask_ratio_25_avg | window 1200: 103917 valid observations
 <span class="n">deciles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">signal_valid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
 <span class="n">deciles</span><span class="p">[</span><span class="n">order</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">signal_valid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="mi">10</span> <span class="o">//</span> <span class="n">signal_valid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span>
 
-<span class="n">decile_rows</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">decile</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">):</span>
-    <span class="n">decile_mask</span> <span class="o">=</span> <span class="n">deciles</span> <span class="o">==</span> <span class="n">decile</span>
-    <span class="n">decile_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+<span class="n">deciles_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+    <span class="p">[</span>
         <span class="p">{</span>
             <span class="s2">"decile"</span><span class="p">:</span> <span class="n">decile</span><span class="p">,</span>
-            <span class="s2">"count"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">decile_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+            <span class="s2">"count"</span><span class="p">:</span> <span class="nb">int</span><span class="p">((</span><span class="n">decile_mask</span> <span class="o">:=</span> <span class="n">deciles</span> <span class="o">==</span> <span class="n">decile</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
             <span class="s2">"mean_signal"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">signal_valid</span><span class="p">[</span><span class="n">decile_mask</span><span class="p">])),</span>
             <span class="s2">"mean_fwd_ret"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">returns_valid</span><span class="p">[</span><span class="n">decile_mask</span><span class="p">])),</span>
         <span class="p">}</span>
-    <span class="p">)</span>
-
-<span class="n">deciles_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">decile_rows</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">decile</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">)</span>
+    <span class="p">]</span>
+<span class="p">)</span>
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">deciles_df</span><span class="p">[</span><span class="s2">"decile"</span><span class="p">],</span> <span class="n">deciles_df</span><span class="p">[</span><span class="s2">"mean_fwd_ret"</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s2">"tab:blue"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.85</span><span class="p">)</span>
@@ -8603,15 +8560,14 @@ Testing bid_ask_ratio_25_avg | window 1200: 103917 valid observations
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=2c620581">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=bb664a97">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h2 id="Next-Steps">Next Steps<a class="anchor-link" href="#Next-Steps">¶</a></h2><p>Register at <a href="https://aperiodic.io">Aperiodic.io</a> to run an interactive version of this notebook
-with access to all available market microstructure metrics, including depth-weighted imbalance,
-flow toxicity, and advanced liquidity measures.</p>
+with access to all available market microstructure metrics.</p>
 </div>
 </div>
 </div>
@@ -8619,6 +8575,6 @@ flow toxicity, and advanced liquidity measures.</p>
 </main>
 </body>
 <script type="application/vnd.jupyter.widget-state+json">
-{"state": {"001e6083e6da4877bb9a403a5e241091": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HBoxModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_278d268b974540758e0687be6d577a2c", "IPY_MODEL_79e97d8bfe8547eaa215ca0dcce46df5", "IPY_MODEL_c3394764f45d42f5b457ae0616c65b07"], "layout": "IPY_MODEL_1cc78dcd80ae480cbe7f0d95910229a9", "tabbable": null, "tooltip": null}}, "023ab68032b84c14852c7ccc1837a91d": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "1cc78dcd80ae480cbe7f0d95910229a9": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "1d5ea21687ab488ab62fe5ed10b57bd2": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "20b990e8ec584f41907f03d9b57f134d": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "278d268b974540758e0687be6d577a2c": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_023ab68032b84c14852c7ccc1837a91d", "placeholder": "\u200b", "style": "IPY_MODEL_82a6d875b2ec45c19b582a38d62b9282", "tabbable": null, "tooltip": null, "value": "Downloading\u2007perpetual-BTC-USDT:USDT\u2007ohlcv:\u2007100%"}}, "27a279f73ecc49d7bfeee781ad1652ee": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "3bca98aba57a4fc79d5089fae73b20e8": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "ProgressStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "4efabc2d60694cc7b8b9e837732d6a58": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "577a6baf5c364db5b8c6c6c73f00888b": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_1d5ea21687ab488ab62fe5ed10b57bd2", "placeholder": "\u200b", "style": "IPY_MODEL_4efabc2d60694cc7b8b9e837732d6a58", "tabbable": null, "tooltip": null, "value": "Downloading\u2007perpetual-BTC-USDT:USDT\u2007l2_imbalance:\u2007100%"}}, "73806987b7db4adf8f4ea74bba16cc66": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "ProgressStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "79e97d8bfe8547eaa215ca0dcce46df5": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "FloatProgressModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_f48a36a5ddcf49959b4e2c9d9f6a7554", "max": 12.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_73806987b7db4adf8f4ea74bba16cc66", "tabbable": null, "tooltip": null, "value": 12.0}}, "82a6d875b2ec45c19b582a38d62b9282": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "845056efe7f641f19277ee13ac081dd7": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "b18d8f2ac363429e84cd74d942339d8d": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "be5cec501b4642f19ce0f9826892c755": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HBoxModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_577a6baf5c364db5b8c6c6c73f00888b", "IPY_MODEL_dd5f778d5a60412a90388a263fb565ef", "IPY_MODEL_c57b28906b5643d4a97da0f8a08d3883"], "layout": "IPY_MODEL_b18d8f2ac363429e84cd74d942339d8d", "tabbable": null, "tooltip": null}}, "c3394764f45d42f5b457ae0616c65b07": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_20b990e8ec584f41907f03d9b57f134d", "placeholder": "\u200b", "style": "IPY_MODEL_db2b97c051cc4c5993d303be33e42922", "tabbable": null, "tooltip": null, "value": "\u200712\/12\u2007[00:00&lt;00:00,\u200717.94file\/s]"}}, "c57b28906b5643d4a97da0f8a08d3883": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_27a279f73ecc49d7bfeee781ad1652ee", "placeholder": "\u200b", "style": "IPY_MODEL_fe530ca7702b4deda6cd3e56b6ac328a", "tabbable": null, "tooltip": null, "value": "\u200712\/12\u2007[00:01&lt;00:00,\u200710.40file\/s]"}}, "db2b97c051cc4c5993d303be33e42922": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "dd5f778d5a60412a90388a263fb565ef": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "FloatProgressModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_845056efe7f641f19277ee13ac081dd7", "max": 12.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_3bca98aba57a4fc79d5089fae73b20e8", "tabbable": null, "tooltip": null, "value": 12.0}}, "f48a36a5ddcf49959b4e2c9d9f6a7554": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "fe530ca7702b4deda6cd3e56b6ac328a": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}}, "version_major": 2, "version_minor": 0}
+{"state": {"023f1662571e40608ee8f6618d6d8728": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "24ebbb8f892e4ea5b6dd3605d4e6edb0": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "2d14f54755d6471a95f1cb1557f8e33b": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_c74ac90f7bc64eaeafbf5abb83919198", "placeholder": "\u200b", "style": "IPY_MODEL_6bdf4f92a89c4b29a77b676876672438", "tabbable": null, "tooltip": null, "value": "Downloading\u2007perpetual-BTC-USDT:USDT\u2007ohlcv:\u2007100%"}}, "2da1d04403b84ed6817fc7377a6a9b7f": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "3408d3b8d3e14767b326216e7e010732": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "3df8b39c6c2a42e8b003e0c31cf679d1": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "ProgressStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "6344774fb2b4439793fc3bd18fceccae": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "6bdf4f92a89c4b29a77b676876672438": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "72b9a96c71e748eaa1f44e2732ac8640": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "777eb677dac94371bda3eea47b4da28a": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "ProgressStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "77e03c9110f6485eb8afe3104901145c": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HBoxModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_2d14f54755d6471a95f1cb1557f8e33b", "IPY_MODEL_8818fd9fe31b4f05b2156538dfd56b15", "IPY_MODEL_8f6cd3304069495e8235b4579941cf20"], "layout": "IPY_MODEL_2da1d04403b84ed6817fc7377a6a9b7f", "tabbable": null, "tooltip": null}}, "8818fd9fe31b4f05b2156538dfd56b15": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "FloatProgressModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_e676df55799f4e74aeb3d0abf4aa6dc0", "max": 12.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_777eb677dac94371bda3eea47b4da28a", "tabbable": null, "tooltip": null, "value": 12.0}}, "8f6cd3304069495e8235b4579941cf20": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_3408d3b8d3e14767b326216e7e010732", "placeholder": "\u200b", "style": "IPY_MODEL_6344774fb2b4439793fc3bd18fceccae", "tabbable": null, "tooltip": null, "value": "\u200712\/12\u2007[00:00&lt;00:00,\u200725.64file\/s]"}}, "946ca574d66d4ff7b6c9838f7463b370": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "FloatProgressModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_72b9a96c71e748eaa1f44e2732ac8640", "max": 12.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_3df8b39c6c2a42e8b003e0c31cf679d1", "tabbable": null, "tooltip": null, "value": 12.0}}, "9b71fd85793b423fa6b0002bcea15d08": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "b9eb5ed0f607434e8e1116de2f27a7be": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_d1de91fcfc9946cba7a8468e3efaaa1f", "placeholder": "\u200b", "style": "IPY_MODEL_023f1662571e40608ee8f6618d6d8728", "tabbable": null, "tooltip": null, "value": "\u200712\/12\u2007[00:00&lt;00:00,\u200717.26file\/s]"}}, "c43a56ab5ea64bc6a8eaf3f35fdb2f7b": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_24ebbb8f892e4ea5b6dd3605d4e6edb0", "placeholder": "\u200b", "style": "IPY_MODEL_9b71fd85793b423fa6b0002bcea15d08", "tabbable": null, "tooltip": null, "value": "Downloading\u2007perpetual-BTC-USDT:USDT\u2007l2_imbalance:\u2007100%"}}, "c74ac90f7bc64eaeafbf5abb83919198": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "c97a6436a9664fbe969d89736e6ed6f1": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "d11e583478754a42add6ee5bb576afbd": {"model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "model_name": "HBoxModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_c43a56ab5ea64bc6a8eaf3f35fdb2f7b", "IPY_MODEL_946ca574d66d4ff7b6c9838f7463b370", "IPY_MODEL_b9eb5ed0f607434e8e1116de2f27a7be"], "layout": "IPY_MODEL_c97a6436a9664fbe969d89736e6ed6f1", "tabbable": null, "tooltip": null}}, "d1de91fcfc9946cba7a8468e3efaaa1f": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "e676df55799f4e74aeb3d0abf4aa6dc0": {"model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}}, "version_major": 2, "version_minor": 0}
 </script>
 </html>
