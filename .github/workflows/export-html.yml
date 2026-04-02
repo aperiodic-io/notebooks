@@ -1,0 +1,78 @@
+name: Export Notebooks to HTML
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "notebooks/*.py"
+      - "notebooks/*.ipynb"
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install jupyter nbconvert jupytext
+          pip install -e ".[notebook]"
+
+      - name: Sync .py to .ipynb
+        run: |
+          for f in notebooks/*.py; do
+            echo "Syncing $f"
+            jupytext --to ipynb "$f"
+          done
+
+      - name: Execute and export notebooks to HTML
+        env:
+          APERIODIC_API_KEY: ${{ secrets.APERIODIC_API_KEY }}
+        run: |
+          mkdir -p html
+          for nb in notebooks/*.ipynb; do
+            name="$(basename "${nb%.ipynb}")"
+            echo "Executing and exporting $name"
+            jupyter nbconvert \
+              --to html \
+              --execute \
+              --ExecutePreprocessor.timeout=300 \
+              --ExecutePreprocessor.kernel_name=python3 \
+              --output-dir=html \
+              --output="$name.html" \
+              "$nb" || echo "WARNING: Failed to export $name"
+          done
+
+      - name: Commit HTML exports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add html/*.html
+          git diff --cached --quiet || git commit -m "chore: export notebooks to HTML"
+          git push
+
+  # Optionally trigger an interactive notebook rebuild in unravel-router
+  trigger-interactive-rebuild:
+    needs: export
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Trigger unravel-router notebook update
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.UNRAVEL_ROUTER_DISPATCH_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'dream-faster',
+              repo: 'unravel-router',
+              workflow_id: 'update-notebooks.yml',
+              ref: 'main',
+              inputs: { notebooks_ref: 'main' }
+            });
