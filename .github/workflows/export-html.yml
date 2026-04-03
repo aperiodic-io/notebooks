@@ -60,6 +60,7 @@ jobs:
             jupyter nbconvert \
               --to html \
               --execute \
+              --no-input \
               --ExecutePreprocessor.timeout=300 \
               --ExecutePreprocessor.kernel_name=python3 \
               --template aperiodic \
