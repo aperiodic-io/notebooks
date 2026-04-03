@@ -25,6 +25,7 @@ flow = await get_metrics_async(
     start_date=date(2024, 1, 15),
     end_date=date(2024, 1, 17),
     base_url=API_BASE,
+    output="pandas",
 )
 flow["net_delta"] = flow["taker_buy_volume"] - flow["taker_sell_volume"]
 flow.head(10)

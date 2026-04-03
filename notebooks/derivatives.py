@@ -24,6 +24,7 @@ funding = await get_derivative_metrics_async(
     start_date=date(2024, 1, 1),
     end_date=date(2024, 2, 1),
     base_url=API_BASE,
+    output="pandas",
 )
 funding.head(10)
 
@@ -51,6 +52,7 @@ oi = await get_derivative_metrics_async(
     start_date=date(2024, 1, 1),
     end_date=date(2024, 2, 1),
     base_url=API_BASE,
+    output="pandas",
 )
 
 fig, ax = plt.subplots(figsize=(10, 4))
@@ -74,21 +76,17 @@ basis = await get_derivative_metrics_async(
     start_date=date(2024, 1, 1),
     end_date=date(2024, 2, 1),
     base_url=API_BASE,
+    output="pandas",
 )
 
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+fig, ax = plt.subplots(figsize=(10, 4))
 
-ax1.plot(pd.to_datetime(basis["time"]), basis["basis"], color="#f59e0b", linewidth=1)
-ax1.set_title("BTC-USDT Basis (Jan 2024)")
-ax1.set_ylabel("Basis")
-ax1.axhline(y=0, color="#94a3b8", linestyle="--", alpha=0.5)
-ax1.grid(True, alpha=0.3)
-
-ax2.plot(pd.to_datetime(basis["time"]), basis["basis_rate"], color="#8b5cf6", linewidth=1)
-ax2.set_ylabel("Basis Rate")
-ax2.set_xlabel("Date")
-ax2.axhline(y=0, color="#94a3b8", linestyle="--", alpha=0.5)
-ax2.grid(True, alpha=0.3)
+ax.plot(pd.to_datetime(basis["time"]), basis["basis"], color="#f59e0b", linewidth=1)
+ax.set_title("BTC-USDT Basis (Jan 2024)")
+ax.set_ylabel("Basis")
+ax.set_xlabel("Date")
+ax.axhline(y=0, color="#94a3b8", linestyle="--", alpha=0.5)
+ax.grid(True, alpha=0.3)
 
 fig.tight_layout()
 plt.show()
