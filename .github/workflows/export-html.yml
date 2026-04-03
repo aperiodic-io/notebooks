@@ -2,10 +2,10 @@ name: Export Notebooks to HTML
 
 on:
   push:
-    branches: ["main"]
     paths:
       - "notebooks/*.py"
       - "notebooks/*.ipynb"
+      - "templates/**"
   workflow_dispatch:
 
 jobs:
