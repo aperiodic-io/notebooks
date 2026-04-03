@@ -2,14 +2,28 @@ name: Export Notebooks to HTML
 
 on:
   push:
-    paths:
-      - "notebooks/*.py"
-      - "notebooks/*.ipynb"
-      - "templates/**"
+  pull_request:
   workflow_dispatch:
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      notebooks: ${{ steps.filter.outputs.notebooks }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            notebooks:
+              - 'notebooks/*.py'
+              - 'notebooks/*.ipynb'
+              - 'templates/**'
+
   export:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.notebooks == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -51,6 +65,7 @@ jobs:
           done
 
       - name: Commit HTML exports
+        if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
