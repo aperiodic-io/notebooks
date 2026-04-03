@@ -21,9 +21,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: |
-          pip install jupyter nbconvert jupytext
-          pip install -e ".[notebook]"
+        run: pip install jupyter nbconvert jupytext "aperiodic[pandas]" pyarrow matplotlib
 
       - name: Sync .py to .ipynb
         run: |
