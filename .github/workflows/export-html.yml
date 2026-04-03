@@ -83,6 +83,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin "${{ github.ref_name }}"
           git add html/*.html
           git diff --cached --quiet || git commit -m "chore(Export): Execute and export notebooks to HTML"
           git push
