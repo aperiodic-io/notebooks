@@ -45,6 +45,8 @@ jobs:
               --execute \
               --ExecutePreprocessor.timeout=300 \
               --ExecutePreprocessor.kernel_name=python3 \
+              --template aperiodic \
+              --HTMLExporter.extra_template_basedirs=./templates \
               --output-dir=html \
               --output="$name.html" \
               "$nb" || echo "WARNING: Failed to export $name"
@@ -55,24 +57,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add html/*.html
-          git diff --cached --quiet || git commit -m "chore: export notebooks to HTML"
+          git diff --cached --quiet || git commit -m "chore(Export): Execute and export notebooks to HTML"
           git push
-
-  # Optionally trigger an interactive notebook rebuild in unravel-router
-  trigger-interactive-rebuild:
-    needs: export
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    steps:
-      - name: Trigger unravel-router notebook update
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.UNRAVEL_ROUTER_DISPATCH_TOKEN }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: 'dream-faster',
-              repo: 'unravel-router',
-              workflow_id: 'update-notebooks.yml',
-              ref: 'main',
-              inputs: { notebooks_ref: 'main' }
-            });

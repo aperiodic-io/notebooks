@@ -1,0 +1,131 @@
+{%- extends 'lab/index.html.j2' -%}
+
+{%- block header -%}
+{{ super() }}
+<style>
+  /* ── Aperiodic branding overrides ────────────────────────────── */
+
+  /* Background: warm cream (#faf8f5) instead of default white */
+  body {
+    background-color: #faf8f5 !important;
+  }
+
+  /* Notebook body area */
+  .jp-Notebook,
+  .jp-NotebookPanel,
+  div#notebook-container {
+    background-color: #faf8f5 !important;
+  }
+
+  /* Cell containers */
+  .jp-Cell,
+  .jp-MarkdownCell,
+  .jp-CodeCell {
+    background-color: transparent !important;
+  }
+
+  /* Input areas — keep a subtle contrast */
+  .jp-InputArea,
+  .jp-Editor,
+  .jp-InputArea-editor,
+  div.input_area {
+    background-color: #f3efe9 !important;
+    border-color: #ebe5dc !important;
+  }
+
+  /* Output area */
+  .jp-OutputArea,
+  .jp-OutputArea-child,
+  div.output_area {
+    background-color: #faf8f5 !important;
+  }
+
+  /* Headings — use system font stack similar to Mona Sans */
+  .jp-RenderedHTMLCommon h1,
+  .jp-RenderedHTMLCommon h2,
+  .jp-RenderedHTMLCommon h3,
+  .jp-RenderedHTMLCommon h4,
+  .jp-RenderedHTMLCommon h5,
+  .jp-RenderedHTMLCommon h6,
+  .jp-RenderedMarkdown h1,
+  .jp-RenderedMarkdown h2,
+  .jp-RenderedMarkdown h3,
+  .jp-RenderedMarkdown h4,
+  .jp-RenderedMarkdown h5,
+  .jp-RenderedMarkdown h6,
+  #notebook-container h1,
+  #notebook-container h2,
+  #notebook-container h3,
+  #notebook-container h4,
+  #notebook-container h5,
+  #notebook-container h6 {
+    font-family: 'Mona Sans', 'Mona Sans Expanded', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif !important;
+    font-weight: 600 !important;
+    color: #1a1a1a !important;
+    letter-spacing: -0.01em;
+  }
+
+  /* Body text in markdown cells */
+  .jp-RenderedHTMLCommon,
+  .jp-RenderedMarkdown,
+  .jp-RenderedMarkdown p,
+  #notebook-container p {
+    font-family: 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif !important;
+    color: #333 !important;
+  }
+
+  /* Code font — keep monospace but soften the background */
+  .jp-RenderedHTMLCommon code,
+  .jp-RenderedMarkdown code {
+    background-color: #f3efe9 !important;
+    border: 1px solid #ebe5dc !important;
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+
+  /* Tables */
+  .jp-RenderedHTMLCommon table,
+  .dataframe {
+    border-collapse: collapse !important;
+  }
+
+  .jp-RenderedHTMLCommon table th,
+  .jp-RenderedHTMLCommon table td,
+  .dataframe th,
+  .dataframe td {
+    border: 1px solid #ebe5dc !important;
+    padding: 6px 10px !important;
+  }
+
+  .jp-RenderedHTMLCommon table th,
+  .dataframe th {
+    background-color: #f3efe9 !important;
+    font-weight: 600 !important;
+  }
+
+  .jp-RenderedHTMLCommon table tr:nth-child(even),
+  .dataframe tbody tr:nth-child(even) {
+    background-color: #f8f5f0 !important;
+  }
+
+  /* Scrollbar styling for embedded view */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #faf8f5;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #ddd8d0;
+    border-radius: 3px;
+  }
+
+  /* Hide toolbar / menu bar in embedded view */
+  .jp-Toolbar,
+  #menubar-container,
+  .jp-NotebookPanel-toolbar {
+    display: none !important;
+  }
+</style>
+{%- endblock header -%}
