@@ -1,7 +1,7 @@
 # %% [markdown]
 # # Derivatives Analytics
 #
-# Explore funding rates, open interest, and basis data for perpetual futures.
+# Explore funding rates, open interest, and basis data for perpetual futures contracts.
 
 # %%
 API_KEY = "..."  # Paste your Aperiodic API key here

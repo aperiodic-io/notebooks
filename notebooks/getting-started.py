@@ -2,7 +2,7 @@
 # # Getting Started with Aperiodic
 #
 # Welcome! This notebook walks you through the basics of fetching market data
-# with the [Aperiodic Python SDK](https://docs.aperiodic.io).
+# with the [Aperiodic Python SDK](https://docs.aperiodic.io/sdk).
 #
 # **Paste your API key** in the first cell below, then run all cells.
 

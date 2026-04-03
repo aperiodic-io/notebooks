@@ -1,8 +1,8 @@
 # %% [markdown]
 # # Order Flow & Microstructure
 #
-# Analyze taker flow, buy/sell imbalances, and volume profiles using
-# Aperiodic's microstructure metrics.
+# Analyze taker flow, buy/sell imbalances, and volume profiles
+# using Aperiodic's microstructure metrics.
 
 # %%
 API_KEY = "..."  # Paste your Aperiodic API key here
