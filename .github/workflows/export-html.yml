@@ -9,20 +9,24 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       notebooks: ${{ steps.filter.outputs.notebooks }}
+      notebooks_files: ${{ steps.filter.outputs.notebooks_files }}
+      templates: ${{ steps.filter.outputs.templates }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          list-files: shell
           filters: |
             notebooks:
               - 'notebooks/*.py'
               - 'notebooks/*.ipynb'
+            templates:
               - 'templates/**'
 
   export:
     needs: detect-changes
-    if: needs.detect-changes.outputs.notebooks == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.detect-changes.outputs.notebooks == 'true' || needs.detect-changes.outputs.templates == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -35,6 +39,38 @@ jobs:
 
       - name: Install dependencies
         run: pip install jupyter nbconvert jupytext "aperiodic[pandas,polars]" pyarrow matplotlib
+
+      - name: Determine which notebooks to export
+        id: resolve
+        env:
+          CHANGED_FILES: ${{ needs.detect-changes.outputs.notebooks_files }}
+          TEMPLATES_CHANGED: ${{ needs.detect-changes.outputs.templates }}
+          IS_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          # If templates changed or manual dispatch, rebuild all notebooks
+          if [ "$TEMPLATES_CHANGED" = "true" ] || [ "$IS_DISPATCH" = "true" ]; then
+            echo "Rebuilding all notebooks (templates changed or manual dispatch)"
+            names=""
+            for f in notebooks/*.py; do
+              name="$(basename "${f%.py}")"
+              names="$names $name"
+            done
+            echo "names=$names" >> "$GITHUB_OUTPUT"
+          else
+            # Only rebuild notebooks whose source files changed
+            names=""
+            for f in $CHANGED_FILES; do
+              base="$(basename "$f")"
+              name="${base%.*}"
+              # Deduplicate (both .py and .ipynb may be listed)
+              case " $names " in
+                *" $name "*) ;;
+                *) names="$names $name" ;;
+              esac
+            done
+            echo "names=$names" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Notebooks to export:$names"
 
       - name: Inject API key into notebooks
         env:
@@ -54,8 +90,9 @@ jobs:
       - name: Execute and export notebooks to HTML
         run: |
           mkdir -p html
-          for nb in notebooks/*.ipynb; do
-            name="$(basename "${nb%.ipynb}")"
+          for name in ${{ steps.resolve.outputs.names }}; do
+            nb="notebooks/${name}.ipynb"
+            [ -f "$nb" ] || continue
             echo "Executing and exporting $name"
             jupyter nbconvert \
               --to html \
