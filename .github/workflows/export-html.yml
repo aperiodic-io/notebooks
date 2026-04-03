@@ -34,7 +34,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install jupyter nbconvert jupytext "aperiodic[pandas]" pyarrow matplotlib
+        run: pip install jupyter nbconvert jupytext "aperiodic[pandas,polars]" pyarrow matplotlib
 
       - name: Sync .py to .ipynb
         run: |
@@ -43,9 +43,15 @@ jobs:
             jupytext --to ipynb "$f"
           done
 
-      - name: Execute and export notebooks to HTML
+      - name: Inject API key into notebooks
         env:
           APERIODIC_API_KEY: ${{ secrets.APERIODIC_API_KEY }}
+        run: |
+          for nb in notebooks/*.ipynb; do
+            sed -i "s|API_KEY = \"...\"|API_KEY = \"${APERIODIC_API_KEY}\"|g" "$nb"
+          done
+
+      - name: Execute and export notebooks to HTML
         run: |
           mkdir -p html
           for nb in notebooks/*.ipynb; do
@@ -61,6 +67,15 @@ jobs:
               --output-dir=html \
               --output="$name.html" \
               "$nb" || echo "WARNING: Failed to export $name"
+          done
+
+      - name: Scrub API key from HTML outputs
+        env:
+          APERIODIC_API_KEY: ${{ secrets.APERIODIC_API_KEY }}
+        run: |
+          for f in html/*.html; do
+            [ -f "$f" ] || continue
+            sed -i "s|${APERIODIC_API_KEY}|...|g" "$f"
           done
 
       - name: Commit HTML exports
