@@ -7843,13 +7843,14 @@ a.anchor-link {
     background-color: transparent !important;
   }
 
-  /* Input areas — keep a subtle contrast */
+  /* Input areas — transparent so they blend with the page background;
+     code cells still get a subtle tint via .highlight / editor background */
   .jp-InputArea,
   .jp-Editor,
   .jp-InputArea-editor,
   div.input_area {
-    background-color: #f3efe9 !important;
-    border-color: #ebe5dc !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
   }
 
   /* Output area */
