@@ -2,7 +2,7 @@
 # # Getting Started with Aperiodic
 #
 # Welcome! This notebook walks you through the basics of fetching market data
-# with the [Aperiodic Python SDK](https://docs.aperiodic.io).
+# with the [Aperiodic Python SDK](https://docs.aperiodic.io/sdk).
 #
 # **Paste your API key** in the first cell below, then run all cells.
 
@@ -26,6 +26,7 @@ df = await get_ohlcv_async(
     start_date=date(2024, 1, 1),
     end_date=date(2024, 3, 1),
     base_url=API_BASE,
+    output="pandas",
 )
 df.head(10)
 
@@ -60,6 +61,7 @@ flow = await get_metrics_async(
     start_date=date(2024, 1, 15),
     end_date=date(2024, 1, 16),
     base_url=API_BASE,
+    output="pandas",
 )
 flow["net_delta"] = flow["taker_buy_volume"] - flow["taker_sell_volume"]
 flow[["time", "taker_buy_volume", "taker_sell_volume", "net_delta"]].head(10)
