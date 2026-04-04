@@ -97,7 +97,6 @@ jobs:
             jupyter nbconvert \
               --to html \
               --execute \
-              --no-input \
               --ExecutePreprocessor.timeout=300 \
               --ExecutePreprocessor.kernel_name=python3 \
               --template aperiodic \
@@ -115,6 +114,7 @@ jobs:
             [ -f "$f" ] || continue
             sed -i "s|${APERIODIC_API_KEY}|...|g" "$f"
           done
+          echo "Scrubbed API key from $(ls html/*.html 2>/dev/null | wc -l) file(s)"
 
       - name: Commit HTML exports
         if: github.event_name == 'push'
