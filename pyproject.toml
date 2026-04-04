@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "aperiodic-notebooks"
 version = "0.1.0"
@@ -21,6 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 notebook = ["jupyter"]
 quality = ["ruff>=0.14.1", "jupytext"]
+export = ["jupyter", "nbconvert", "jupytext"]
 
 [tool.ruff]
 target-version = "py311"
