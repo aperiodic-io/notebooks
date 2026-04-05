@@ -74,9 +74,10 @@
     --jp-mirror-editor-error-color: #ff6b6b;
   }
 
-  /* Background */
+  /* Background — overflow hidden so parent page handles scrolling */
   body {
     background-color: var(--ap-bg) !important;
+    overflow: hidden !important;
   }
 
   /* Notebook body area */
@@ -228,12 +229,29 @@
   }
 </style>
 <script>
-  // Apply dark mode from URL param: ?theme=dark
   (function() {
+    // Apply dark mode from URL param: ?theme=dark
     var params = new URLSearchParams(window.location.search);
     if (params.get('theme') === 'dark') {
       document.documentElement.classList.add('dark');
     }
+
+    // Report content height to parent for auto-resize (avoids double scrolling)
+    function reportHeight() {
+      var h = document.documentElement.scrollHeight;
+      var path = window.location.pathname;
+      var filename = (path.split('/').pop() || '').replace('.html', '');
+      var mode = window.location.href.includes('playground-wasm') ? 'interactive' : 'static';
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'notebook-height', height: h, id: mode + ':' + filename }, '*');
+      }
+    }
+    if (document.readyState === 'complete') {
+      reportHeight();
+    } else {
+      window.addEventListener('load', reportHeight);
+    }
+    new ResizeObserver(reportHeight).observe(document.documentElement);
   })();
 </script>
 {%- endblock header -%}
