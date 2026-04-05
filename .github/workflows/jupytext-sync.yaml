@@ -2,6 +2,7 @@ name: Jupytext Sync
 
 on:
   push:
+    branches-ignore: [main]
     paths:
       - "notebooks/*.py"
 

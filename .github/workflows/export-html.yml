@@ -2,6 +2,7 @@ name: Export Notebooks to HTML
 
 on:
   push:
+    branches-ignore: [main]
   workflow_dispatch:
 
 jobs:
