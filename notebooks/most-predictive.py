@@ -68,8 +68,10 @@ COST_BPS = 0.0
 if load_dotenv is not None:
     load_dotenv(".env")
 
-API_KEY = os.getenv("APERIODIC_API_KEY")
-if not API_KEY:
+API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
+if API_KEY == "...":
+    API_KEY = os.getenv("APERIODIC_API_KEY", "...")
+if API_KEY == "...":
     raise RuntimeError("Set APERIODIC_API_KEY in the environment or in .env.")
 
 
