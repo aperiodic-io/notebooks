@@ -5,16 +5,36 @@
 <style>
   /* ── Aperiodic branding overrides ────────────────────────────── */
 
-  /* Background: warm cream (#faf8f5) instead of default white */
+  :root {
+    --ap-bg: #faf8f5;
+    --ap-bg-muted: #f3efe9;
+    --ap-bg-alt: #f8f5f0;
+    --ap-border: #ebe5dc;
+    --ap-text: #333;
+    --ap-text-heading: #1a1a1a;
+    --scrollbar-thumb: #ddd8d0;
+  }
+
+  html.dark {
+    --ap-bg: #0f0d08;
+    --ap-bg-muted: #1a1710;
+    --ap-bg-alt: #1f1b13;
+    --ap-border: #2a2418;
+    --ap-text: #c8c0b4;
+    --ap-text-heading: #e8e2d8;
+    --scrollbar-thumb: #3a3328;
+  }
+
+  /* Background */
   body {
-    background-color: #faf8f5 !important;
+    background-color: var(--ap-bg) !important;
   }
 
   /* Notebook body area */
   .jp-Notebook,
   .jp-NotebookPanel,
   div#notebook-container {
-    background-color: #faf8f5 !important;
+    background-color: var(--ap-bg) !important;
   }
 
   /* Cell containers */
@@ -38,7 +58,7 @@
   .jp-OutputArea,
   .jp-OutputArea-child,
   div.output_area {
-    background-color: #faf8f5 !important;
+    background-color: var(--ap-bg) !important;
   }
 
   /* Headings — use system font stack similar to Mona Sans */
@@ -62,7 +82,7 @@
   #notebook-container h6 {
     font-family: 'Mona Sans', 'Mona Sans Expanded', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif !important;
     font-weight: 600 !important;
-    color: #1a1a1a !important;
+    color: var(--ap-text-heading) !important;
     letter-spacing: -0.01em;
   }
 
@@ -72,14 +92,14 @@
   .jp-RenderedMarkdown p,
   #notebook-container p {
     font-family: 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif !important;
-    color: #333 !important;
+    color: var(--ap-text) !important;
   }
 
   /* Code font — keep monospace but soften the background */
   .jp-RenderedHTMLCommon code,
   .jp-RenderedMarkdown code {
-    background-color: #f3efe9 !important;
-    border: 1px solid #ebe5dc !important;
+    background-color: var(--ap-bg-muted) !important;
+    border: 1px solid var(--ap-border) !important;
     border-radius: 3px;
     padding: 1px 4px;
   }
@@ -94,32 +114,61 @@
   .jp-RenderedHTMLCommon table td,
   .dataframe th,
   .dataframe td {
-    border: 1px solid #ebe5dc !important;
+    border: 1px solid var(--ap-border) !important;
     padding: 6px 10px !important;
+    color: var(--ap-text) !important;
   }
 
   .jp-RenderedHTMLCommon table th,
   .dataframe th {
-    background-color: #f3efe9 !important;
+    background-color: var(--ap-bg-muted) !important;
     font-weight: 600 !important;
   }
 
   .jp-RenderedHTMLCommon table tr:nth-child(even),
   .dataframe tbody tr:nth-child(even) {
-    background-color: #f8f5f0 !important;
+    background-color: var(--ap-bg-alt) !important;
   }
 
-  /* Scrollbar styling for embedded view */
+  /* Left padding to align notebook header with site chrome */
+  .jp-Notebook {
+    padding-left: 2rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* Scrollbar: hidden until user hovers/scrolls */
+  html {
+    scrollbar-gutter: stable;
+  }
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #faf8f5;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #ddd8d0;
+    background: transparent;
     border-radius: 3px;
+    transition: background 0.2s;
+  }
+  html:hover ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+
+  /* Firefox: thin auto-hidden scrollbar */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  html:hover {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  /* Dark mode: invert matplotlib/image outputs for readability */
+  html.dark .jp-OutputArea-output img,
+  html.dark .jp-OutputArea-output svg {
+    filter: invert(0.88) hue-rotate(180deg);
   }
 
   /* Hide toolbar / menu bar in embedded view */
@@ -129,4 +178,13 @@
     display: none !important;
   }
 </style>
+<script>
+  // Apply dark mode from URL param: ?theme=dark
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  })();
+</script>
 {%- endblock header -%}
