@@ -2,6 +2,7 @@ name: Jupytext Sync
 
 on:
   push:
+    branches-ignore: [main]
     paths:
       - "notebooks/*.py"
 
@@ -19,14 +20,27 @@ jobs:
 
       - run: pip install jupytext
 
-      - name: Convert .py to .ipynb
+      - name: Get changed .py files
+        id: changed
+        uses: dorny/paths-filter@v3
+        with:
+          list-files: shell
+          filters: |
+            notebooks:
+              - 'notebooks/*.py'
+
+      - name: Convert changed .py to .ipynb
+        if: steps.changed.outputs.notebooks == 'true'
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.notebooks_files }}
         run: |
-          for f in notebooks/*.py; do
+          for f in $CHANGED_FILES; do
             echo "Converting $f"
-            jupytext --to ipynb "$f"
+            jupytext --update --to ipynb "$f"
           done
 
       - name: Commit .ipynb files
+        if: steps.changed.outputs.notebooks == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

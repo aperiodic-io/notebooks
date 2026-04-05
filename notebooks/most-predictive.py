@@ -18,8 +18,9 @@
 
 from __future__ import annotations
 
+import datetime
 import os
-from datetime import date, timedelta
+from datetime import timedelta
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,8 +38,8 @@ EXCHANGE = "binance-futures"
 INTERVAL = "5m"
 TIMESTAMP = "exchange"  # local timestamp
 
-START_DATE = date.today() - timedelta(days=365)
-END_DATE = date.today()
+START_DATE = datetime.datetime.now(tz=datetime.UTC).date() - timedelta(days=365)
+END_DATE = datetime.datetime.now(tz=datetime.UTC).date()
 
 # For demonstration purposes, we'll use only the l2_imbalance metric category.
 METRICS = [
@@ -87,10 +88,7 @@ def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:
     )
 
     # Ensure it's a pandas DataFrame
-    if hasattr(raw_df, "to_pandas"):
-        df = raw_df.to_pandas()
-    else:
-        df = pd.DataFrame(raw_df)
+    df = raw_df.to_pandas() if hasattr(raw_df, "to_pandas") else pd.DataFrame(raw_df)
 
     if df.empty or "time" not in df.columns:
         return None
@@ -104,7 +102,7 @@ def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:
         return None
 
     return df.sort_values("time").drop_duplicates(subset=["time"], keep="last")[
-        ["time"] + numeric_cols
+        ["time", *numeric_cols]
     ]
 
 
@@ -130,7 +128,7 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
     for metric, kind in METRICS:
         frame = get_numeric_metric_frame(metric, kind)
         if frame is not None:
-            panel = pd.merge(panel, frame, on="time", how="left")
+            panel = panel.merge(frame, on="time", how="left")
 
     panel = panel.sort_values("time")
     panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
@@ -149,7 +147,7 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
 def make_signal(panel_df: pd.DataFrame, feature: str, window: int) -> np.ndarray:
     rank = panel_df[feature].rolling(window).rank(method="average")
     signal = ((rank - 1.0) / (window - 1)) * 2.0 - 1.0
-    return signal.values.astype(np.float64)
+    return signal.to_numpy().astype(np.float64)
 
 
 panel, feature_cols = build_panel()
@@ -162,7 +160,7 @@ print(panel.head())
 # %%
 # Calculate forward returns, information coefficient, and backtest for each
 # metric and window combination.
-forward_returns = panel["fwd_ret"].values.astype(np.float64)
+forward_returns = panel["fwd_ret"].to_numpy().astype(np.float64)
 results = []
 
 for feature in feature_cols:
