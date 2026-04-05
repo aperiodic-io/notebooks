@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <html lang="en">
-<head><style>html.dark{--md-grey-900:#c8c0b4;--jp-mirror-editor-keyword-color:#72b866;--jp-mirror-editor-atom-color:#a8a0ff;--jp-mirror-editor-number-color:#6bc26b;--jp-mirror-editor-def-color:#6cacf5;--jp-mirror-editor-variable-color:#c8c0b4;--jp-mirror-editor-variable-2-color:#7cb8d8;--jp-mirror-editor-variable-3-color:#6bc2a0;--jp-mirror-editor-punctuation-color:#7cb8d8;--jp-mirror-editor-property-color:#7cb8d8;--jp-mirror-editor-operator-color:#c8a0f0;--jp-mirror-editor-comment-color:#7a9a8a;--jp-mirror-editor-string-color:#e88070;--jp-mirror-editor-string-2-color:#d89cc0;--jp-mirror-editor-meta-color:#c8a0f0;--jp-mirror-editor-qualifier-color:#9a9288;--jp-mirror-editor-builtin-color:#72b866;--jp-mirror-editor-bracket-color:#b0a880;--jp-mirror-editor-tag-color:#72b866;--jp-mirror-editor-attribute-color:#6cacf5;--jp-mirror-editor-header-color:#6cacf5;--jp-mirror-editor-error-color:#ff6b6b}</style><meta charset="utf-8"/>
+<head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>most-predictive</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script><script>
 (function() {
@@ -7867,6 +7867,30 @@ a.anchor-link {
     --md-grey-300: #2a2418;
     --md-grey-400: #3a3328;
     --md-grey-700: #8a8278;
+    --md-grey-900: #c8c0b4;
+
+    /* Syntax highlighting — light-on-dark palette */
+    --jp-mirror-editor-keyword-color: #72b866;
+    --jp-mirror-editor-atom-color: #a8a0ff;
+    --jp-mirror-editor-number-color: #6bc26b;
+    --jp-mirror-editor-def-color: #6cacf5;
+    --jp-mirror-editor-variable-color: #c8c0b4;
+    --jp-mirror-editor-variable-2-color: #7cb8d8;
+    --jp-mirror-editor-variable-3-color: #6bc2a0;
+    --jp-mirror-editor-punctuation-color: #7cb8d8;
+    --jp-mirror-editor-property-color: #7cb8d8;
+    --jp-mirror-editor-operator-color: #c8a0f0;
+    --jp-mirror-editor-comment-color: #7a9a8a;
+    --jp-mirror-editor-string-color: #e88070;
+    --jp-mirror-editor-string-2-color: #d89cc0;
+    --jp-mirror-editor-meta-color: #c8a0f0;
+    --jp-mirror-editor-qualifier-color: #9a9288;
+    --jp-mirror-editor-builtin-color: #72b866;
+    --jp-mirror-editor-bracket-color: #b0a880;
+    --jp-mirror-editor-tag-color: #72b866;
+    --jp-mirror-editor-attribute-color: #6cacf5;
+    --jp-mirror-editor-header-color: #6cacf5;
+    --jp-mirror-editor-error-color: #ff6b6b;
   }
 
   /* Background */
@@ -8212,23 +8236,23 @@ easily work as-is for simplistic backtests as well.</p>
 <div class="jp-OutputArea jp-Cell-outputArea">
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jupyter-widgets jp-OutputArea-output" id="ea4c24bb-cbaf-4d9c-8348-0eb09703cb5e" tabindex="0">
+<div class="jupyter-widgets jp-OutputArea-output" id="a2ddb4c8-d5d7-4fd3-879c-662a7724b670" tabindex="0">
 <script type="text/javascript">
-var element = document.getElementById('ea4c24bb-cbaf-4d9c-8348-0eb09703cb5e');
+var element = document.getElementById('a2ddb4c8-d5d7-4fd3-879c-662a7724b670');
 </script>
 <script type="application/vnd.jupyter.widget-view+json">
-{"version_major": 2, "version_minor": 0, "model_id": "65774fcd530e4e438177ced14f6881ef"}
+{"version_major": 2, "version_minor": 0, "model_id": "86f691c31ff642cbb97fb181791a4f13"}
 </script>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jupyter-widgets jp-OutputArea-output" id="dfaf1668-b5f4-42b8-a8f1-5273c8cc9833" tabindex="0">
+<div class="jupyter-widgets jp-OutputArea-output" id="900a85fb-373c-4b95-8d35-dbd6bbbf05db" tabindex="0">
 <script type="text/javascript">
-var element = document.getElementById('dfaf1668-b5f4-42b8-a8f1-5273c8cc9833');
+var element = document.getElementById('900a85fb-373c-4b95-8d35-dbd6bbbf05db');
 </script>
 <script type="application/vnd.jupyter.widget-view+json">
-{"version_major": 2, "version_minor": 0, "model_id": "e1b6575c6e944e9c80a21bdb301f4c42"}
+{"version_major": 2, "version_minor": 0, "model_id": "fb54ce27470149baa700c812f975ab9d"}
 </script>
 </div>
 </div>
@@ -8395,13 +8419,7 @@ Testing bid_ask_ratio_5 | window 600: 95589 valid observations
 <pre>Testing imbalance_5_avg | window 100: 96089 valid observations
 Testing imbalance_5_avg | window 300: 95889 valid observations
 Testing imbalance_5_avg | window 600: 95589 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_5_avg | window 1200: 94989 valid observations
+Testing imbalance_5_avg | window 1200: 94989 valid observations
 </pre>
 </div>
 </div>
@@ -8409,40 +8427,40 @@ Testing imbalance_5_avg | window 600: 95589 valid observations
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Testing imbalance_ratio_5_avg | window 100: 96089 valid observations
-Testing imbalance_ratio_5_avg | window 300: 95889 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_ratio_5_avg | window 300: 95889 valid observations
 Testing imbalance_ratio_5_avg | window 600: 95589 valid observations
+Testing imbalance_ratio_5_avg | window 1200: 94989 valid observations
+Testing bid_ask_ratio_5_avg | window 100: 96089 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_5_avg | window 1200: 94989 valid observations
+<pre>Testing bid_ask_ratio_5_avg | window 300: 95889 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_5_avg | window 100: 96089 valid observations
-Testing bid_ask_ratio_5_avg | window 300: 95889 valid observations
-Testing bid_ask_ratio_5_avg | window 600: 95589 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_5_avg | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_10 | window 100: 96089 valid observations
+<pre>Testing bid_ask_ratio_5_avg | window 600: 95589 valid observations
+Testing bid_ask_ratio_5_avg | window 1200: 94989 valid observations
+Testing imbalance_10 | window 100: 96089 valid observations
 Testing imbalance_10 | window 300: 95889 valid observations
-Testing imbalance_10 | window 600: 95589 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_10 | window 600: 95589 valid observations
 </pre>
 </div>
 </div>
@@ -8450,13 +8468,7 @@ Testing imbalance_10 | window 600: 95589 valid observations
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Testing imbalance_10 | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_10 | window 100: 96089 valid observations
+Testing imbalance_ratio_10 | window 100: 96089 valid observations
 Testing imbalance_ratio_10 | window 300: 95889 valid observations
 Testing imbalance_ratio_10 | window 600: 95589 valid observations
 </pre>
@@ -8475,13 +8487,7 @@ Testing imbalance_ratio_10 | window 600: 95589 valid observations
 <pre>Testing bid_ask_ratio_10 | window 100: 96089 valid observations
 Testing bid_ask_ratio_10 | window 300: 95889 valid observations
 Testing bid_ask_ratio_10 | window 600: 95589 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_10 | window 1200: 94989 valid observations
+Testing bid_ask_ratio_10 | window 1200: 94989 valid observations
 </pre>
 </div>
 </div>
@@ -8489,40 +8495,40 @@ Testing bid_ask_ratio_10 | window 600: 95589 valid observations
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Testing imbalance_10_avg | window 100: 96089 valid observations
-Testing imbalance_10_avg | window 300: 95889 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing imbalance_10_avg | window 300: 95889 valid observations
 Testing imbalance_10_avg | window 600: 95589 valid observations
+Testing imbalance_10_avg | window 1200: 94989 valid observations
+Testing imbalance_ratio_10_avg | window 100: 96089 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_10_avg | window 1200: 94989 valid observations
+<pre>Testing imbalance_ratio_10_avg | window 300: 95889 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_10_avg | window 100: 96089 valid observations
-Testing imbalance_ratio_10_avg | window 300: 95889 valid observations
-Testing imbalance_ratio_10_avg | window 600: 95589 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_10_avg | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_10_avg | window 100: 96089 valid observations
+<pre>Testing imbalance_ratio_10_avg | window 600: 95589 valid observations
+Testing imbalance_ratio_10_avg | window 1200: 94989 valid observations
+Testing bid_ask_ratio_10_avg | window 100: 96089 valid observations
 Testing bid_ask_ratio_10_avg | window 300: 95889 valid observations
-Testing bid_ask_ratio_10_avg | window 600: 95589 valid observations
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Testing bid_ask_ratio_10_avg | window 600: 95589 valid observations
 </pre>
 </div>
 </div>
@@ -8530,13 +8536,7 @@ Testing bid_ask_ratio_10_avg | window 600: 95589 valid observations
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Testing bid_ask_ratio_10_avg | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_20 | window 100: 96089 valid observations
+Testing imbalance_20 | window 100: 96089 valid observations
 Testing imbalance_20 | window 300: 95889 valid observations
 Testing imbalance_20 | window 600: 95589 valid observations
 </pre>
@@ -8546,22 +8546,10 @@ Testing imbalance_20 | window 600: 95589 valid observations
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Testing imbalance_20 | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_20 | window 100: 96089 valid observations
+Testing imbalance_ratio_20 | window 100: 96089 valid observations
 Testing imbalance_ratio_20 | window 300: 95889 valid observations
 Testing imbalance_ratio_20 | window 600: 95589 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_20 | window 1200: 94989 valid observations
+Testing imbalance_ratio_20 | window 1200: 94989 valid observations
 </pre>
 </div>
 </div>
@@ -8571,52 +8559,28 @@ Testing imbalance_ratio_20 | window 600: 95589 valid observations
 <pre>Testing bid_ask_ratio_20 | window 100: 96089 valid observations
 Testing bid_ask_ratio_20 | window 300: 95889 valid observations
 Testing bid_ask_ratio_20 | window 600: 95589 valid observations
+Testing bid_ask_ratio_20 | window 1200: 94989 valid observations
+Testing imbalance_20_avg | window 100: 96089 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_20 | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_20_avg | window 100: 96089 valid observations
-Testing imbalance_20_avg | window 300: 95889 valid observations
+<pre>Testing imbalance_20_avg | window 300: 95889 valid observations
 Testing imbalance_20_avg | window 600: 95589 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_20_avg | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_20_avg | window 100: 96089 valid observations
+Testing imbalance_20_avg | window 1200: 94989 valid observations
+Testing imbalance_ratio_20_avg | window 100: 96089 valid observations
 Testing imbalance_ratio_20_avg | window 300: 95889 valid observations
-Testing imbalance_ratio_20_avg | window 600: 95589 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_20_avg | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_20_avg | window 100: 96089 valid observations
+<pre>Testing imbalance_ratio_20_avg | window 600: 95589 valid observations
+Testing imbalance_ratio_20_avg | window 1200: 94989 valid observations
+Testing bid_ask_ratio_20_avg | window 100: 96089 valid observations
 Testing bid_ask_ratio_20_avg | window 300: 95889 valid observations
 Testing bid_ask_ratio_20_avg | window 600: 95589 valid observations
 </pre>
@@ -8626,22 +8590,10 @@ Testing bid_ask_ratio_20_avg | window 600: 95589 valid observations
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Testing bid_ask_ratio_20_avg | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_25 | window 100: 96089 valid observations
+Testing imbalance_25 | window 100: 96089 valid observations
 Testing imbalance_25 | window 300: 95889 valid observations
 Testing imbalance_25 | window 600: 95589 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_25 | window 1200: 94989 valid observations
+Testing imbalance_25 | window 1200: 94989 valid observations
 </pre>
 </div>
 </div>
@@ -8651,52 +8603,28 @@ Testing imbalance_25 | window 600: 95589 valid observations
 <pre>Testing imbalance_ratio_25 | window 100: 96089 valid observations
 Testing imbalance_ratio_25 | window 300: 95889 valid observations
 Testing imbalance_ratio_25 | window 600: 95589 valid observations
+Testing imbalance_ratio_25 | window 1200: 94989 valid observations
+Testing bid_ask_ratio_25 | window 100: 96089 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_25 | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_25 | window 100: 96089 valid observations
-Testing bid_ask_ratio_25 | window 300: 95889 valid observations
+<pre>Testing bid_ask_ratio_25 | window 300: 95889 valid observations
 Testing bid_ask_ratio_25 | window 600: 95589 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_25 | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_25_avg | window 100: 96089 valid observations
+Testing bid_ask_ratio_25 | window 1200: 94989 valid observations
+Testing imbalance_25_avg | window 100: 96089 valid observations
 Testing imbalance_25_avg | window 300: 95889 valid observations
-Testing imbalance_25_avg | window 600: 95589 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_25_avg | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing imbalance_ratio_25_avg | window 100: 96089 valid observations
+<pre>Testing imbalance_25_avg | window 600: 95589 valid observations
+Testing imbalance_25_avg | window 1200: 94989 valid observations
+Testing imbalance_ratio_25_avg | window 100: 96089 valid observations
 Testing imbalance_ratio_25_avg | window 300: 95889 valid observations
 Testing imbalance_ratio_25_avg | window 600: 95589 valid observations
 </pre>
@@ -8706,23 +8634,17 @@ Testing imbalance_ratio_25_avg | window 600: 95589 valid observations
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Testing imbalance_ratio_25_avg | window 1200: 94989 valid observations
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_25_avg | window 100: 96089 valid observations
+Testing bid_ask_ratio_25_avg | window 100: 96089 valid observations
 Testing bid_ask_ratio_25_avg | window 300: 95889 valid observations
 Testing bid_ask_ratio_25_avg | window 600: 95589 valid observations
+Testing bid_ask_ratio_25_avg | window 1200: 94989 valid observations
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Testing bid_ask_ratio_25_avg | window 1200: 94989 valid observations
-                   feature  window  direction  fit_corr     sharpe  \
+<pre>                   feature  window  direction  fit_corr     sharpe  \
 5        imbalance_ratio_5     300          1  0.033982  10.904485   
 9          bid_ask_ratio_5     300          1  0.033982  10.904475   
 6        imbalance_ratio_5     600          1  0.033749  10.776432   
@@ -8937,6 +8859,6 @@ with access to all available market microstructure metrics.</p>
 </main>
 </body>
 <script type="application/vnd.jupyter.widget-state+json">
-{"state": {"acea2dc099e945f38e4fcfac0af5a31b": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "e826a110bcf841d29228d04b7057ccd5": {"model_name": "ProgressStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "0b6f841f2d4848228382919a73a9efac": {"model_name": "FloatProgressModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_acea2dc099e945f38e4fcfac0af5a31b", "max": 11.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_e826a110bcf841d29228d04b7057ccd5", "tabbable": null, "tooltip": null, "value": 11.0}}, "256e09fd4c2044379cc78a1027d45f73": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "e3488dd9ecce497f84f992a0d5acb1b6": {"model_name": "HTMLStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "a0761d06694b470e999a363b45ece1a9": {"model_name": "HTMLModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_256e09fd4c2044379cc78a1027d45f73", "placeholder": "\u200b", "style": "IPY_MODEL_e3488dd9ecce497f84f992a0d5acb1b6", "tabbable": null, "tooltip": null, "value": "Downloading\u2007perpetual-BTC-USDT:USDT\u2007ohlcv:\u2007100%"}}, "3ca722ae157444e3a82d951621f30a0b": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "d2d8d2fba87d46ee97f1896f27b8dd72": {"model_name": "HTMLStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "123c13d0f1004d0193c3b63fccafc70f": {"model_name": "HTMLModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_3ca722ae157444e3a82d951621f30a0b", "placeholder": "\u200b", "style": "IPY_MODEL_d2d8d2fba87d46ee97f1896f27b8dd72", "tabbable": null, "tooltip": null, "value": "\u200711\/11\u2007[00:00&lt;00:00,\u200721.00file\/s]"}}, "1bdf5f4553754427a1d04194568d83d7": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "65774fcd530e4e438177ced14f6881ef": {"model_name": "HBoxModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_a0761d06694b470e999a363b45ece1a9", "IPY_MODEL_0b6f841f2d4848228382919a73a9efac", "IPY_MODEL_123c13d0f1004d0193c3b63fccafc70f"], "layout": "IPY_MODEL_1bdf5f4553754427a1d04194568d83d7", "tabbable": null, "tooltip": null}}, "0fe030aed07340bea1079118efe1e43d": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "92b3263904a34ba6af5c23364b519532": {"model_name": "ProgressStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "cbfe54d487b144b09fd4adb28f6ed488": {"model_name": "FloatProgressModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_0fe030aed07340bea1079118efe1e43d", "max": 11.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_92b3263904a34ba6af5c23364b519532", "tabbable": null, "tooltip": null, "value": 11.0}}, "29fc4b4d376546ee9966c5702fd22d4a": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "7220a3ee9b9b4702bdab4eddf8b1286d": {"model_name": "HTMLStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "5352bdbe4581439f9ee40122efd40287": {"model_name": "HTMLModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_29fc4b4d376546ee9966c5702fd22d4a", "placeholder": "\u200b", "style": "IPY_MODEL_7220a3ee9b9b4702bdab4eddf8b1286d", "tabbable": null, "tooltip": null, "value": "Downloading\u2007perpetual-BTC-USDT:USDT\u2007l2_imbalance:\u2007100%"}}, "5081aab2ed5743c3ab050da2ffd6a101": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "556647b73d6747ba951ac5497b3b61b4": {"model_name": "HTMLStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "cffb8ce6240f441a839d23c6c3f2965b": {"model_name": "HTMLModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_5081aab2ed5743c3ab050da2ffd6a101", "placeholder": "\u200b", "style": "IPY_MODEL_556647b73d6747ba951ac5497b3b61b4", "tabbable": null, "tooltip": null, "value": "\u200711\/11\u2007[00:00&lt;00:00,\u200716.20file\/s]"}}, "5b7bab1fbe414b6f8e1d93933bb03b82": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "e1b6575c6e944e9c80a21bdb301f4c42": {"model_name": "HBoxModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_5352bdbe4581439f9ee40122efd40287", "IPY_MODEL_cbfe54d487b144b09fd4adb28f6ed488", "IPY_MODEL_cffb8ce6240f441a839d23c6c3f2965b"], "layout": "IPY_MODEL_5b7bab1fbe414b6f8e1d93933bb03b82", "tabbable": null, "tooltip": null}}}, "version_major": 2, "version_minor": 0}
+{"state": {"738532efbc8a4b7baaf36caf19a50ec1": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "ea2fad6ea20747c3beb0357847a7b764": {"model_name": "ProgressStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "43ab4b534909474ba77d003e104f25d6": {"model_name": "FloatProgressModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_738532efbc8a4b7baaf36caf19a50ec1", "max": 11.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_ea2fad6ea20747c3beb0357847a7b764", "tabbable": null, "tooltip": null, "value": 11.0}}, "a5764b3aaf11477aa0fbbc6d6a7d8f90": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "e49cd2d29d494b60a147cdc9e3218bcf": {"model_name": "HTMLStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "a88bee1df2ab476c8612b327bd255269": {"model_name": "HTMLModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_a5764b3aaf11477aa0fbbc6d6a7d8f90", "placeholder": "\u200b", "style": "IPY_MODEL_e49cd2d29d494b60a147cdc9e3218bcf", "tabbable": null, "tooltip": null, "value": "Downloading\u2007perpetual-BTC-USDT:USDT\u2007ohlcv:\u2007100%"}}, "c6372e01f1a141d5a7d38cf5d51f0e36": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "53c06d2c0771456ca8801fd798da94f9": {"model_name": "HTMLStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "4da9989636d34291b7cb873e5f85a63d": {"model_name": "HTMLModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_c6372e01f1a141d5a7d38cf5d51f0e36", "placeholder": "\u200b", "style": "IPY_MODEL_53c06d2c0771456ca8801fd798da94f9", "tabbable": null, "tooltip": null, "value": "\u200711\/11\u2007[00:00&lt;00:00,\u200722.29file\/s]"}}, "c5d057e90b41475daa1fbbafb7e48701": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "86f691c31ff642cbb97fb181791a4f13": {"model_name": "HBoxModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_a88bee1df2ab476c8612b327bd255269", "IPY_MODEL_43ab4b534909474ba77d003e104f25d6", "IPY_MODEL_4da9989636d34291b7cb873e5f85a63d"], "layout": "IPY_MODEL_c5d057e90b41475daa1fbbafb7e48701", "tabbable": null, "tooltip": null}}, "64f4db5fd7ff464581434aaf7a2cfda3": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "1d7198ee87a54835a695791cf81d587f": {"model_name": "ProgressStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "28a5b666990a46a5b78725aea9cb3994": {"model_name": "FloatProgressModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_64f4db5fd7ff464581434aaf7a2cfda3", "max": 11.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_1d7198ee87a54835a695791cf81d587f", "tabbable": null, "tooltip": null, "value": 11.0}}, "efd6e1d81371439ca8f9372459c66979": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "6177c901c24646bfa22c1fe882154caa": {"model_name": "HTMLStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "606cd616e2804bcfa930d96a2e1ac18e": {"model_name": "HTMLModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_efd6e1d81371439ca8f9372459c66979", "placeholder": "\u200b", "style": "IPY_MODEL_6177c901c24646bfa22c1fe882154caa", "tabbable": null, "tooltip": null, "value": "Downloading\u2007perpetual-BTC-USDT:USDT\u2007l2_imbalance:\u2007100%"}}, "0e012cd71abb43a3852a139a2cbfaa96": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "88f3569f996c4eb7b14b0bc0bd6d4e24": {"model_name": "HTMLStyleModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "1c0e58d7a9bf4cf7aa098b328700e136": {"model_name": "HTMLModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_0e012cd71abb43a3852a139a2cbfaa96", "placeholder": "\u200b", "style": "IPY_MODEL_88f3569f996c4eb7b14b0bc0bd6d4e24", "tabbable": null, "tooltip": null, "value": "\u200711\/11\u2007[00:00&lt;00:00,\u200716.25file\/s]"}}, "9e8c8953c97e4f7da3fe314eaef44ccc": {"model_name": "LayoutModel", "model_module": "@jupyter-widgets\/base", "model_module_version": "2.0.0", "state": {"_model_module": "@jupyter-widgets\/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets\/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "fb54ce27470149baa700c812f975ab9d": {"model_name": "HBoxModel", "model_module": "@jupyter-widgets\/controls", "model_module_version": "2.0.0", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets\/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets\/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_606cd616e2804bcfa930d96a2e1ac18e", "IPY_MODEL_28a5b666990a46a5b78725aea9cb3994", "IPY_MODEL_1c0e58d7a9bf4cf7aa098b328700e136"], "layout": "IPY_MODEL_9e8c8953c97e4f7da3fe314eaef44ccc", "tabbable": null, "tooltip": null}}}, "version_major": 2, "version_minor": 0}
 </script>
 </html>
