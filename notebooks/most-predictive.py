@@ -25,8 +25,8 @@ from datetime import timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from utils._aperiodic_demo import run_position_backtest
 from aperiodic import get_derivative_metrics, get_metrics, get_ohlcv
+from utils._aperiodic_demo import run_position_backtest
 
 try:
     from dotenv import load_dotenv

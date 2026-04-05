@@ -52,7 +52,7 @@ def run_position_backtest(
     drawdowns = (equity - running_max) / running_max
     max_drawdown_pct = float(np.min(drawdowns)) * 100.0
 
-    # Annualized Sharpe (assume 5-min bars → 288 bars/day × 365 days)
+    # Annualized Sharpe (assume 5-min bars, 288 bars/day x 365 days)
     bars_per_year = 288 * 365
     mean_ret = float(np.mean(net_pnl))
     std_ret = float(np.std(net_pnl, ddof=1)) if len(net_pnl) > 1 else 1.0
@@ -62,7 +62,7 @@ def run_position_backtest(
 
     bt_frame = pd.DataFrame(
         {
-            "timestamp": timestamps.values,
+            "timestamp": timestamps.to_numpy(),
             "equity_curve": equity,
         }
     )
