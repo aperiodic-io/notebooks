@@ -81,11 +81,13 @@ jobs:
             sed -i "s|API_KEY = \"...\"|API_KEY = \"${APERIODIC_API_KEY}\"|g" "$f"
           done
 
-      - name: Sync .py to .ipynb
+      - name: Sync changed .py to .ipynb
         run: |
-          for f in notebooks/*.py; do
+          for name in ${{ steps.resolve.outputs.names }}; do
+            f="notebooks/${name}.py"
+            [ -f "$f" ] || continue
             echo "Syncing $f"
-            jupytext --to ipynb "$f"
+            jupytext --update --to ipynb "$f"
           done
 
       - name: Execute and export notebooks to HTML
