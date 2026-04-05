@@ -179,22 +179,12 @@
   }
 </style>
 <script>
+  // Apply dark mode from URL param: ?theme=dark
   (function() {
-    // Apply dark mode from URL param: ?theme=dark
     var params = new URLSearchParams(window.location.search);
     if (params.get('theme') === 'dark') {
       document.documentElement.classList.add('dark');
     }
-
-    // Inject CTA section at the end of the notebook after DOM loads
-    document.addEventListener('DOMContentLoaded', function() {
-      var cta = document.createElement('div');
-      cta.style.cssText = 'max-width:900px;margin:3rem auto 2rem;padding:2rem 2.5rem;border:1px solid var(--ap-border);border-radius:8px;background:var(--ap-bg-muted);font-family:Mona Sans,-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Helvetica,Arial,sans-serif;text-align:center';
-      cta.innerHTML = '<h3 style="margin:0 0 .5rem;font-size:1.125rem;font-weight:600;color:var(--ap-text-heading)">Run this notebook interactively</h3>'
-        + '<p style="margin:0 0 1.25rem;font-size:.875rem;color:var(--ap-text);opacity:.7">Edit the code, swap parameters, and run with your own API key \u2014 no local setup needed.</p>'
-        + '<a href="https://aperiodic.io/auth/sign-up" style="display:inline-block;padding:.5rem 1.5rem;font-size:.875rem;font-weight:500;color:#faf8f5;background:#1a1a1a;border-radius:6px;text-decoration:none" onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity=1">Get started free \u2192</a>';
-      document.body.appendChild(cta);
-    });
   })();
 </script>
 {%- endblock header -%}
