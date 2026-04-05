@@ -36,7 +36,7 @@ except ModuleNotFoundError:  # pragma: no cover
 SYMBOL = "perpetual-BTC-USDT:USDT"
 EXCHANGE = "binance-futures"
 INTERVAL = "5m"
-TIMESTAMP = "exchange"  # local timestamp
+TIMESTAMP = "exchange"  # local timestamp or "true"
 
 START_DATE = datetime.datetime.now(tz=datetime.UTC).date() - timedelta(days=365)
 END_DATE = datetime.datetime.now(tz=datetime.UTC).date()
@@ -137,7 +137,8 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
     feature_cols = [
         col
         for col in panel.columns
-        if col not in {"time", "close", "fwd_ret"} and pd.api.types.is_numeric_dtype(panel[col])
+        if col not in {"time", "close", "fwd_ret"}
+        and pd.api.types.is_numeric_dtype(panel[col])
     ]
 
     print(f"Panel built: {len(panel)} rows. Found {len(feature_cols)} features.")
@@ -175,7 +176,9 @@ for feature in feature_cols:
         direction = 1 if fit_corr >= 0 else -1
         bt_frame, bt_summary = run_position_backtest(
             timestamps=panel.loc[mask, "time"],
-            position=np.nan_to_num(np.clip(signal_raw[mask] * direction, -1.0, 1.0), nan=0.0),
+            position=np.nan_to_num(
+                np.clip(signal_raw[mask] * direction, -1.0, 1.0), nan=0.0
+            ),
             forward_return=forward_returns[mask],
             cost_bps_one_way=COST_BPS,
         )
@@ -228,11 +231,15 @@ print(best)
 fig, axes = plt.subplots(2, 1, figsize=(14, 6), sharex=True)
 axes[0].plot(panel["time"], signal, linewidth=0.9, color="tab:red")
 axes[0].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
-axes[0].set_title(f"Signal: {best_feature} | window={best_window} | dir={best_direction}")
+axes[0].set_title(
+    f"Signal: {best_feature} | window={best_window} | dir={best_direction}"
+)
 axes[0].grid(alpha=0.2)
 
 axes[1].plot(bt_frame["timestamp"], equity, linewidth=1.1, color="tab:green")
-axes[1].set_title(f"Equity | Sharpe={best['sharpe']:.3f} | TotalRet={best['total_return']:.3f}")
+axes[1].set_title(
+    f"Equity | Sharpe={best['sharpe']:.3f} | TotalRet={best['total_return']:.3f}"
+)
 axes[1].grid(alpha=0.2)
 
 fig.tight_layout()
