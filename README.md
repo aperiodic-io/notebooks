@@ -20,6 +20,29 @@ pip install -e ".[quality]"
 
 ## Usage
 
+### Run the new introductory notebooks
+
+Create and populate the UV environment:
+
+```bash
+uv venv .venv
+UV_CACHE_DIR=/tmp/uv-cache uv pip install -p .venv/bin/python 'aperiodic[pandas]' pyarrow matplotlib seaborn python-dotenv jupyter jupytext nbconvert
+```
+
+Make sure `.env` contains:
+
+```bash
+APERIODIC_API_KEY=your_key_here
+```
+
+Then open any of the new notebooks:
+
+```bash
+.venv/bin/jupyter notebook notebooks/intro-flow.ipynb
+```
+
+The new notebooks analyze Binance BTC perpetuals at **5-minute** resolution and load the API key from `.env` automatically without printing it.
+
 ### Jupyter / VS Code
 
 Open any `.ipynb` file in Jupyter:
@@ -43,6 +66,9 @@ python notebooks/getting-started.py
 | `getting-started` | OHLCV data fetching, charting, and basic flow metrics |
 | `derivatives` | Funding rates, open interest, and basis analysis |
 | `order-flow` | Taker flow, buy/sell imbalances, and cumulative delta |
+| `intro-flow` | Polished 5-minute BTC perpetual flow notebook using `.env` API key loading |
+| `intro-derivatives` | Polished 5-minute BTC perpetual derivatives regime notebook (funding, OI, basis) |
+| `intro-l1-price` | Polished 5-minute BTC perpetual top-of-book microstructure notebook |
 
 ## Development
 
