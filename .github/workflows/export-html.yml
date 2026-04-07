@@ -1,8 +1,13 @@
-name: Export Notebooks to HTML
+name: Export Notebooks
 
 on:
   push:
     branches-ignore: [main]
+    paths:
+      - "notebooks/*.py"
+      - "templates/**"
+      - ".github/workflows/export-html.yml"
+      - "pyproject.toml"
   workflow_dispatch:
 
 jobs:
@@ -21,7 +26,6 @@ jobs:
           filters: |
             notebooks:
               - 'notebooks/*.py'
-              - 'notebooks/*.ipynb'
             templates:
               - 'templates/**'
 
@@ -94,6 +98,26 @@ jobs:
             jupytext --update --to ipynb "$f"
           done
 
+      - name: Remove generated files for deleted notebooks
+        if: github.event_name == 'push'
+        env:
+          CHANGED_FILES: ${{ needs.detect-changes.outputs.notebooks_files }}
+        run: |
+          for f in $CHANGED_FILES; do
+            [ -f "$f" ] && continue
+            name="$(basename "${f%.py}")"
+            ipynb="notebooks/${name}.ipynb"
+            html="html/${name}.html"
+            if [ -f "$ipynb" ]; then
+              echo "Removing $ipynb (source deleted)"
+              rm "$ipynb"
+            fi
+            if [ -f "$html" ]; then
+              echo "Removing $html (source deleted)"
+              rm "$html"
+            fi
+          done
+
       - name: Execute and export notebooks to HTML
         run: |
           mkdir -p html
@@ -123,29 +147,13 @@ jobs:
           done
           echo "Scrubbed API key from $(ls html/*.html 2>/dev/null | wc -l) file(s)"
 
-      - name: Remove HTML for deleted notebooks
-        if: github.event_name == 'push'
-        env:
-          CHANGED_FILES: ${{ needs.detect-changes.outputs.notebooks_files }}
-        run: |
-          for f in $CHANGED_FILES; do
-            [ -f "$f" ] && continue
-            base="$(basename "$f")"
-            name="${base%.*}"
-            html="html/${name}.html"
-            if [ -f "$html" ]; then
-              echo "Removing $html (source deleted)"
-              rm "$html"
-            fi
-          done
-
-      - name: Commit HTML exports
+      - name: Commit generated notebooks and HTML
         if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add html/
-          git diff --cached --quiet || git commit -m "chore(Export): Execute and export notebooks to HTML"
+          git add notebooks/*.ipynb html/*.html || true
+          git diff --cached --quiet || git commit -m "chore(Export): Sync notebooks and export HTML"
           git stash --include-untracked
           git pull --rebase origin "${{ github.ref_name }}"
           git stash pop || true
