@@ -221,21 +221,7 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 5 — Flow toxicity score
-#
-# Higher toxicity-style readings can be interpreted as more one-sided or more adverse selection-prone activity.
-
-# %%
-fig, ax = plt.subplots()
-ax.plot(flow["time"], flow["flow_toxicity_score"], color="#0f766e", linewidth=1)
-ax.axhline(0, color="black", linestyle="--", linewidth=0.8, alpha=0.7)
-ax.set_title("Flow toxicity score through time")
-ax.set_ylabel("Score")
-format_time_axis(ax)
-plt.tight_layout()
-
-# %% [markdown]
-# ## Chart 6 — Large-trade participation
+# ## Chart 5 — Large-trade participation
 
 # %%
 fig, ax = plt.subplots()
@@ -246,30 +232,28 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 7 — Do stretched flow readings line up with future returns?
+# ## Chart 6 — Absolute flow shock and BTC price
 #
-# This is not a predictive model — just a visual check of whether more extreme imbalance tends to coincide with stronger next-1-hour returns.
+# This view pairs the absolute net-delta z-score with BTC price to show whether unusually stretched flow episodes lined up with major price moves.
 
 # %%
-scatter = flow[["abs_delta_zscore_1d", "next_1h_return_bps"]].dropna()
-fig, ax = plt.subplots()
-sns.regplot(
-    data=scatter.sample(min(len(scatter), 4000), random_state=7),
-    x="abs_delta_zscore_1d",
-    y="next_1h_return_bps",
-    scatter_kws={"alpha": 0.2, "s": 20, "color": "#2563eb"},
-    line_kws={"color": "#111827", "linewidth": 2},
-    ax=ax,
-)
-ax.set_title("Absolute flow shock vs next 1-hour return")
-ax.set_xlabel("Absolute net-delta z-score (1-day rolling)")
-ax.set_ylabel("Forward return (bps)")
+fig, (ax_zscore, ax_price) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+ax_zscore.plot(flow["time"], flow["abs_delta_zscore_1d"], color="#2563eb", linewidth=1.2)
+ax_zscore.axhline(0, color="black", linestyle="--", linewidth=0.8, alpha=0.7)
+ax_zscore.set_title("Absolute net-delta z-score (1-day rolling)")
+ax_zscore.set_ylabel("Z-score")
+format_time_axis(ax_zscore)
+
+ax_price.plot(flow["time"], flow["close"], color="#111827", linewidth=1.2)
+ax_price.set_title("BTC perpetual close price")
+ax_price.set_ylabel("Price (USDT)")
+format_time_axis(ax_price)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 8 — Intraday flow seasonality
+# ## Chart 7 — Intraday buy/sell ratio seasonality
 #
-# The heatmap below highlights which weekday/hour combinations tended to have the strongest average notional imbalance.
+# The heatmap below highlights which weekday/hour combinations tended to have the strongest average taker buy/sell ratio.
 
 # %%
 seasonality = flow.assign(
@@ -278,30 +262,17 @@ seasonality = flow.assign(
 ).pivot_table(
     index="weekday",
     columns="hour",
-    values="net_delta_notional_m",
+    values="taker_buy_sell_ratio",
     aggfunc="mean",
 )
 seasonality = seasonality.reindex(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
 
 fig, ax = plt.subplots(figsize=(16, 5))
-sns.heatmap(seasonality, cmap="RdBu_r", center=0, ax=ax)
-ax.set_title("Average 1-hour net delta by weekday and hour (USD mn)")
+sns.heatmap(seasonality, cmap="RdBu_r", center=1.0, ax=ax)
+ax.set_title("Average 1-hour taker buy/sell ratio by weekday and hour")
 ax.set_xlabel("Hour of day")
 ax.set_ylabel("")
 plt.tight_layout()
-
-# %% [markdown]
-# ## A quick event table
-
-# %%
-flow.nlargest(10, "abs_delta_zscore_1d")[[
-    "time",
-    "close",
-    "net_delta_notional_m",
-    "flow_toxicity_score",
-    "large_trade_share",
-    "next_1h_return_bps",
-]].reset_index(drop=True)
 
 # %% [markdown]
 # ## Takeaways

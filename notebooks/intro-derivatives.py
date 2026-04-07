@@ -267,28 +267,7 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 7 — Crowding score vs next 1-hour returns
-#
-# This scatter helps visualize whether more crowded derivatives positioning tended to coincide with subsequent mean reversion or continuation.
-
-# %%
-scatter = derivs[["crowding_score", "next_1h_return_bps"]].dropna()
-fig, ax = plt.subplots()
-sns.regplot(
-    data=scatter.sample(min(len(scatter), 4000), random_state=7),
-    x="crowding_score",
-    y="next_1h_return_bps",
-    scatter_kws={"alpha": 0.2, "s": 20, "color": "#7c3aed"},
-    line_kws={"color": "#111827", "linewidth": 2},
-    ax=ax,
-)
-ax.set_title("Crowding score vs next 1-hour return")
-ax.set_xlabel("Crowding score")
-ax.set_ylabel("Forward return (bps)")
-plt.tight_layout()
-
-# %% [markdown]
-# ## Chart 8 — Funding by weekday and hour
+# ## Chart 7 — Funding by weekday and hour
 
 # %%
 seasonality = derivs.assign(
