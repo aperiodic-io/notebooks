@@ -198,26 +198,20 @@ summary = pd.Series(
 summary
 
 # %% [markdown]
-# ## Chart 1 — BTC price as context
+# ## Charts 1-2 — BTC price and funding rate
 
 # %%
-fig, ax = plt.subplots()
-ax.plot(derivs["time"], derivs["close"], color="#2563eb", linewidth=1.2)
-ax.set_title("BTC perpetual close price")
-ax.set_ylabel("Price (USDT)")
-format_time_axis(ax)
-plt.tight_layout()
+fig, (ax_price, ax_funding) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+ax_price.plot(derivs["time"], derivs["close"], color="#2563eb", linewidth=1.2)
+ax_price.set_title("BTC perpetual close price")
+ax_price.set_ylabel("Price (USDT)")
+format_time_axis(ax_price)
 
-# %% [markdown]
-# ## Chart 2 — Funding rate through time
-
-# %%
-fig, ax = plt.subplots()
-ax.plot(derivs["time"], derivs["funding_rate_bps"], color="#dc2626", linewidth=1)
-ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
-ax.set_title("Funding rate (bps)")
-ax.set_ylabel("bps")
-format_time_axis(ax)
+ax_funding.plot(derivs["time"], derivs["funding_rate_bps"], color="#dc2626", linewidth=1)
+ax_funding.axhline(0, color="black", linestyle="--", linewidth=0.8)
+ax_funding.set_title("Funding rate (bps)")
+ax_funding.set_ylabel("bps")
+format_time_axis(ax_funding)
 plt.tight_layout()
 
 # %% [markdown]
