@@ -175,61 +175,44 @@ flow[[
 ]].head()
 
 # %% [markdown]
-# ## Chart 1 — BTC price over the analysis window
+# ## Charts 1-2 — BTC price and aggressive buy/sell flow
 
 # %%
-fig, ax = plt.subplots()
-ax.plot(price["time"], price["close"], color="#2563eb", linewidth=1.2)
-ax.set_title("BTC perpetual close price — Sep 2025 to Feb 2026")
-ax.set_ylabel("Price (USDT)")
-ax.set_xlabel("")
-format_time_axis(ax)
+fig, (ax_price, ax_flow) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+ax_price.plot(price["time"], price["close"], color="#2563eb", linewidth=1.2)
+ax_price.set_title("BTC perpetual close price")
+ax_price.set_ylabel("Price (USDT)")
+format_time_axis(ax_price)
+
+ax_flow.plot(flow["time"], flow["taker_buy_volume"], label="Taker buy volume", color="#059669", alpha=0.8)
+ax_flow.plot(flow["time"], flow["taker_sell_volume"], label="Taker sell volume", color="#dc2626", alpha=0.8)
+ax_flow.set_title("Aggressive buy and sell flow")
+ax_flow.set_ylabel("Volume")
+ax_flow.legend(frameon=True)
+format_time_axis(ax_flow)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 2 — Taker buy vs taker sell volume
-
-# %%
-fig, ax = plt.subplots()
-ax.plot(flow["time"], flow["taker_buy_volume"], label="Taker buy volume", color="#059669", alpha=0.8)
-ax.plot(flow["time"], flow["taker_sell_volume"], label="Taker sell volume", color="#dc2626", alpha=0.8)
-ax.set_title("Aggressive buy and sell flow")
-ax.set_ylabel("Volume")
-ax.legend(frameon=True)
-format_time_axis(ax)
-plt.tight_layout()
-
-# %% [markdown]
-# ## Chart 3 — Net delta in notional terms
-
-# %%
-fig, ax = plt.subplots(figsize=(14, 5))
-up = flow[flow["net_delta_notional_m"] >= 0]
-down = flow[flow["net_delta_notional_m"] < 0]
-ax.bar(up["time"], up["net_delta_notional_m"], width=0.003, color="#16a34a", alpha=0.7)
-ax.bar(down["time"], down["net_delta_notional_m"], width=0.003, color="#ef4444", alpha=0.7)
-ax.axhline(0, color="black", linewidth=0.8)
-ax.set_title("1-hour notional net delta (USD millions)")
-ax.set_ylabel("USD mn")
-format_time_axis(ax)
-plt.tight_layout()
-
-# %% [markdown]
-# ## Chart 4 — Cumulative delta
+# ## Chart 3 — Cumulative delta and BTC price
 #
-# Cumulative delta summarizes whether aggressive buying or selling dominated over the full sample.
+# Cumulative delta summarizes whether aggressive buying or selling dominated over the full sample, alongside BTC price for context.
 
 # %%
-fig, ax = plt.subplots()
-ax.plot(flow["time"], flow["cumulative_delta"], color="#7c3aed", linewidth=1.4)
-ax.fill_between(flow["time"], flow["cumulative_delta"], alpha=0.12, color="#7c3aed")
-ax.set_title("Cumulative delta (BTC units)")
-ax.set_ylabel("BTC")
-format_time_axis(ax)
+fig, (ax_delta, ax_price) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+ax_delta.plot(flow["time"], flow["cumulative_delta"], color="#7c3aed", linewidth=1.4)
+ax_delta.fill_between(flow["time"], flow["cumulative_delta"], alpha=0.12, color="#7c3aed")
+ax_delta.set_title("Cumulative delta (BTC units)")
+ax_delta.set_ylabel("BTC")
+format_time_axis(ax_delta)
+
+ax_price.plot(flow["time"], flow["close"], color="#2563eb", linewidth=1.2)
+ax_price.set_title("BTC perpetual close price")
+ax_price.set_ylabel("Price (USDT)")
+format_time_axis(ax_price)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 5 — One-day rolling buy/sell ratio
+# ## Chart 4 — One-day rolling buy/sell ratio
 
 # %%
 fig, ax = plt.subplots()
@@ -241,7 +224,7 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 6 — Flow toxicity score
+# ## Chart 5 — Flow toxicity score
 #
 # Higher toxicity-style readings can be interpreted as more one-sided or more adverse selection-prone activity.
 
@@ -255,7 +238,7 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 7 — Large-trade participation
+# ## Chart 6 — Large-trade participation
 
 # %%
 fig, ax = plt.subplots()
@@ -266,7 +249,7 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 8 — Do stretched flow readings line up with future returns?
+# ## Chart 7 — Do stretched flow readings line up with future returns?
 #
 # This is not a predictive model — just a visual check of whether more extreme imbalance tends to coincide with stronger next-1-hour returns.
 
@@ -287,7 +270,7 @@ ax.set_ylabel("Forward return (bps)")
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 9 — Intraday flow seasonality
+# ## Chart 8 — Intraday flow seasonality
 #
 # The heatmap below highlights which weekday/hour combinations tended to have the strongest average notional imbalance.
 

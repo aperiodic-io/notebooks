@@ -310,21 +310,6 @@ ax.set_ylabel("")
 plt.tight_layout()
 
 # %% [markdown]
-# ## Most crowded snapshots
-
-# %%
-derivs.nlargest(10, "crowding_score")[[
-    "time",
-    "close",
-    "funding_rate_bps",
-    "basis_bps",
-    "open_interest",
-    "oi_change_1h_pct",
-    "crowding_score",
-    "next_1h_return_bps",
-]].reset_index(drop=True)
-
-# %% [markdown]
 # ## Takeaways
 #
 # - Funding, basis, and open interest are complementary measures of **leverage, crowding, and carry**.
