@@ -55,7 +55,6 @@ plt.rcParams["savefig.dpi"] = 140
 plt.rcParams["axes.spines.top"] = False
 plt.rcParams["axes.spines.right"] = False
 
-BASE_URL = "https://aperiodic.io/api/v1"
 EXCHANGE = "binance-futures"
 SYMBOL = "perpetual-BTC-USDT:USDT"
 INTERVAL = "1h"
@@ -105,7 +104,6 @@ price = clip_window(
         symbol=SYMBOL,
         start_date=START_DATE,
         end_date=END_DATE,
-        base_url=BASE_URL,
         output="pandas",
         show_progress=False,
     )
@@ -121,7 +119,6 @@ flow = clip_window(
         symbol=SYMBOL,
         start_date=START_DATE,
         end_date=END_DATE,
-        base_url=BASE_URL,
         output="pandas",
         show_progress=False,
     )
