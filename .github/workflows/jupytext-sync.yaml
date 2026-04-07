@@ -18,7 +18,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install jupytext
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - run: uv pip install --system jupytext
 
       - name: Get changed .py files
         id: changed

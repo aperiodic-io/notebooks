@@ -18,15 +18,27 @@ classifiers = [
 
 dependencies = [
     "aperiodic[pandas]",
+    "numpy",
+    "pandas",
     "pyarrow",
     "matplotlib",
     "seaborn",
 ]
 
 [project.optional-dependencies]
-notebook = ["jupyter"]
+notebook = [
+    "ipykernel",
+    "jupyter",
+    "jupytext",
+    "nbconvert",
+]
 quality = ["ruff>=0.14.1", "jupytext"]
-export = ["jupyter", "nbconvert", "jupytext"]
+export = [
+    "ipykernel",
+    "jupyter",
+    "jupytext",
+    "nbconvert",
+]
 
 [tool.ruff]
 target-version = "py311"
