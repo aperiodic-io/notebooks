@@ -20,6 +20,7 @@ dependencies = [
     "aperiodic[pandas]",
     "pyarrow",
     "matplotlib",
+    "seaborn",
 ]
 
 [project.optional-dependencies]

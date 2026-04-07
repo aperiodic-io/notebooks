@@ -39,7 +39,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install jupyter nbconvert jupytext "aperiodic[pandas,polars]" pyarrow matplotlib
+        run: pip install -e ".[export]"
 
       - name: Determine which notebooks to export
         id: resolve
