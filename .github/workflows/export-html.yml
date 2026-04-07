@@ -58,9 +58,10 @@ jobs:
             done
             echo "names=$names" >> "$GITHUB_OUTPUT"
           else
-            # Only rebuild notebooks whose source files changed
+            # Only rebuild notebooks whose source files changed (skip deletions)
             names=""
             for f in $CHANGED_FILES; do
+              [ -f "$f" ] || continue
               base="$(basename "$f")"
               name="${base%.*}"
               # Deduplicate (both .py and .ipynb may be listed)
@@ -119,12 +120,25 @@ jobs:
           done
           echo "Scrubbed API key from $(ls html/*.html 2>/dev/null | wc -l) file(s)"
 
+      - name: Remove HTML for deleted notebooks
+        if: github.event_name == 'push'
+        env:
+          CHANGED_FILES: ${{ needs.detect-changes.outputs.notebooks_files }}
+        run: |
+          for f in $CHANGED_FILES; do
+            [ -f "$f" ] && continue
+            base="$(basename "$f")"
+            name="${base%.*}"
+            html="html/${name}.html"
+            [ -f "$html" ] && echo "Removing $html (source deleted)" && rm "$html"
+          done
+
       - name: Commit HTML exports
         if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add html/*.html
+          git add html/
           git diff --cached --quiet || git commit -m "chore(Export): Execute and export notebooks to HTML"
           git stash --include-untracked
           git pull --rebase origin "${{ github.ref_name }}"
