@@ -154,14 +154,22 @@ summary
 l1_zoom = l1.loc[(l1["time"] >= CHART_ZOOM_START) & (l1["time"] < CHART_ZOOM_END)].copy()
 
 # %% [markdown]
-# ## Chart 1 — Best bid, best ask, and midprice
+# ## Chart 1 — Midprice with the bid-ask band
 
 # %%
 fig, ax = plt.subplots(figsize=(14, 6))
-ax.plot(l1_zoom["time"], l1_zoom["bid_price"], color="#16a34a", linewidth=1, label="Bid")
-ax.plot(l1_zoom["time"], l1_zoom["ask_price"], color="#dc2626", linewidth=1, label="Ask")
-ax.plot(l1_zoom["time"], l1_zoom["midprice"], color="#2563eb", linewidth=1.2, label="Mid")
-ax.set_title("Top-of-book bid, ask, and midpoint (Oct 9-10, 2025)")
+ax.fill_between(
+    l1_zoom["time"],
+    l1_zoom["bid_price"],
+    l1_zoom["ask_price"],
+    color="#fde68a",
+    alpha=0.45,
+    label="Bid-ask band",
+)
+ax.plot(l1_zoom["time"], l1_zoom["midprice"], color="#2563eb", linewidth=1.3, label="Midprice")
+ax.plot(l1_zoom["time"], l1_zoom["bid_price"], color="#16a34a", linewidth=0.8, alpha=0.7, label="Bid")
+ax.plot(l1_zoom["time"], l1_zoom["ask_price"], color="#dc2626", linewidth=0.8, alpha=0.7, label="Ask")
+ax.set_title("Midprice with quoted bid-ask band (Oct 9-10, 2025)")
 ax.set_ylabel("Price (USDT)")
 ax.legend(frameon=True, ncol=3)
 format_time_axis(ax)
