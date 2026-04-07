@@ -18,7 +18,7 @@
 # This notebook introduces **order-flow analytics** with the `aperiodic` Python package.
 # We focus on a single large-cap instrument — **Binance BTC perpetuals**
 # (`perpetual-BTC-USDT:USDT`) — over the exact six-month window from **September 1, 2025**
-# through **February 28, 2026**, using **5-minute** observations.
+# through **February 28, 2026**, using **1-hour** observations.
 #
 # ## Why flow matters
 #
@@ -60,7 +60,7 @@ plt.rcParams["axes.spines.right"] = False
 BASE_URL = "https://aperiodic.io/api/v1"
 EXCHANGE = "binance-futures"
 SYMBOL = "perpetual-BTC-USDT:USDT"
-INTERVAL = "5m"
+INTERVAL = "1h"
 START_DATE = date(2025, 9, 1)
 END_DATE = date(2026, 2, 28)
 START_TS = pd.Timestamp(START_DATE)
@@ -137,17 +137,17 @@ flow = flow.merge(price[["time", "close", "volume_notional"]], on="time", how="l
 flow["net_delta"] = flow["volume_delta"]
 flow["cumulative_delta"] = flow["net_delta"].cumsum()
 flow["net_delta_notional_m"] = flow["volume_delta_notional"] / 1_000_000
-flow["rolling_net_delta_1d"] = flow["net_delta_notional_m"].rolling(288).sum()
-flow["rolling_buy_sell_ratio_1d"] = flow["taker_buy_sell_ratio"].rolling(288).mean()
+flow["rolling_net_delta_1d"] = flow["net_delta_notional_m"].rolling(24).sum()
+flow["rolling_buy_sell_ratio_1d"] = flow["taker_buy_sell_ratio"].rolling(24).mean()
 flow["flow_toxicity_score"] = flow["flow_toxicity_score"].fillna(0)
 flow["large_trade_share"] = (
     flow["taker_buy_large_order_count"] + flow["taker_sell_large_order_count"]
 ) / (flow["taker_buy_count"] + flow["taker_sell_count"])
-flow["large_trade_share_1d"] = flow["large_trade_share"].rolling(288).mean()
-flow["next_30m_return_bps"] = pct_bps(flow["close"].pct_change(6).shift(-6))
+flow["large_trade_share_1d"] = flow["large_trade_share"].rolling(24).mean()
+flow["next_1h_return_bps"] = pct_bps(flow["close"].pct_change(1).shift(-1))
 flow["abs_delta_zscore_1d"] = (
-    flow["net_delta_notional_m"].abs() - flow["net_delta_notional_m"].rolling(288).mean()
-) / flow["net_delta_notional_m"].rolling(288).std()
+    flow["net_delta_notional_m"].abs() - flow["net_delta_notional_m"].rolling(24).mean()
+) / flow["net_delta_notional_m"].rolling(24).std()
 
 summary = pd.Series(
     {
@@ -156,7 +156,7 @@ summary = pd.Series(
         "End": flow["time"].max(),
         "Mean buy/sell ratio": flow["taker_buy_sell_ratio"].mean(),
         "Median toxicity score": flow["flow_toxicity_score"].median(),
-        "Average 5m net delta (BTC)": flow["net_delta"].mean(),
+        "Average 1h net delta (BTC)": flow["net_delta"].mean(),
         "Average large-trade share": flow["large_trade_share"].mean(),
     }
 )
@@ -212,7 +212,7 @@ down = flow[flow["net_delta_notional_m"] < 0]
 ax.bar(up["time"], up["net_delta_notional_m"], width=0.003, color="#16a34a", alpha=0.7)
 ax.bar(down["time"], down["net_delta_notional_m"], width=0.003, color="#ef4444", alpha=0.7)
 ax.axhline(0, color="black", linewidth=0.8)
-ax.set_title("5-minute notional net delta (USD millions)")
+ax.set_title("1-hour notional net delta (USD millions)")
 ax.set_ylabel("USD mn")
 format_time_axis(ax)
 plt.tight_layout()
@@ -271,20 +271,20 @@ plt.tight_layout()
 # %% [markdown]
 # ## Chart 8 — Do stretched flow readings line up with future returns?
 #
-# This is not a predictive model — just a visual check of whether more extreme imbalance tends to coincide with stronger next-30-minute returns.
+# This is not a predictive model — just a visual check of whether more extreme imbalance tends to coincide with stronger next-1-hour returns.
 
 # %%
-scatter = flow[["abs_delta_zscore_1d", "next_30m_return_bps"]].dropna()
+scatter = flow[["abs_delta_zscore_1d", "next_1h_return_bps"]].dropna()
 fig, ax = plt.subplots()
 sns.regplot(
     data=scatter.sample(min(len(scatter), 4000), random_state=7),
     x="abs_delta_zscore_1d",
-    y="next_30m_return_bps",
+    y="next_1h_return_bps",
     scatter_kws={"alpha": 0.2, "s": 20, "color": "#2563eb"},
     line_kws={"color": "#111827", "linewidth": 2},
     ax=ax,
 )
-ax.set_title("Absolute flow shock vs next 30-minute return")
+ax.set_title("Absolute flow shock vs next 1-hour return")
 ax.set_xlabel("Absolute net-delta z-score (1-day rolling)")
 ax.set_ylabel("Forward return (bps)")
 plt.tight_layout()
@@ -308,7 +308,7 @@ seasonality = seasonality.reindex(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Su
 
 fig, ax = plt.subplots(figsize=(16, 5))
 sns.heatmap(seasonality, cmap="RdBu_r", center=0, ax=ax)
-ax.set_title("Average 5-minute net delta by weekday and hour (USD mn)")
+ax.set_title("Average 1-hour net delta by weekday and hour (USD mn)")
 ax.set_xlabel("Hour of day")
 ax.set_ylabel("")
 plt.tight_layout()
@@ -323,13 +323,13 @@ flow.nlargest(10, "abs_delta_zscore_1d")[[
     "net_delta_notional_m",
     "flow_toxicity_score",
     "large_trade_share",
-    "next_30m_return_bps",
+    "next_1h_return_bps",
 ]].reset_index(drop=True)
 
 # %% [markdown]
 # ## Takeaways
 #
-# - BTC perpetual flow is **highly bursty** at a 5-minute horizon.
+# - BTC perpetual flow is **highly bursty** even at a 1-hour horizon.
 # - Cumulative delta helps separate short-lived noise from persistent aggressive buying/selling pressure.
 # - Large-trade participation and toxicity-style features add useful **microstructure context** beyond raw buy/sell volume.
 # - For practical trading research, flow is usually most useful **alongside price, liquidity, and derivatives positioning** rather than by itself.
