@@ -133,7 +133,10 @@ jobs:
             base="$(basename "$f")"
             name="${base%.*}"
             html="html/${name}.html"
-            [ -f "$html" ] && echo "Removing $html (source deleted)" && rm "$html"
+            if [ -f "$html" ]; then
+              echo "Removing $html (source deleted)"
+              rm "$html"
+            fi
           done
 
       - name: Commit HTML exports

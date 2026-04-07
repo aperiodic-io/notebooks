@@ -52,8 +52,14 @@ jobs:
             if [ ! -f "$f" ]; then
               ipynb="${f%.py}.ipynb"
               html="html/$(basename "${f%.py}").html"
-              [ -f "$ipynb" ] && echo "Removing $ipynb" && rm "$ipynb"
-              [ -f "$html" ] && echo "Removing $html" && rm "$html"
+              if [ -f "$ipynb" ]; then
+                echo "Removing $ipynb"
+                rm "$ipynb"
+              fi
+              if [ -f "$html" ]; then
+                echo "Removing $html"
+                rm "$html"
+              fi
             fi
           done
 
