@@ -226,18 +226,7 @@ ax.set_xlabel("Funding rate (bps)")
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 4 — Open interest
-
-# %%
-fig, ax = plt.subplots()
-ax.plot(derivs["time"], derivs["open_interest"], color="#059669", linewidth=1)
-ax.set_title("Open interest")
-ax.set_ylabel("Contracts / units")
-format_time_axis(ax)
-plt.tight_layout()
-
-# %% [markdown]
-# ## Chart 5 — Price vs open interest
+# ## Chart 4 — Price vs open interest
 #
 # A rising market with rising open interest often suggests leverage is building alongside the move.
 
@@ -253,7 +242,7 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 6 — Basis in basis points
+# ## Chart 5 — Basis in basis points
 
 # %%
 fig, ax = plt.subplots()
@@ -265,7 +254,7 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 7 — Crowding score and highlighted stress regimes
+# ## Chart 6 — Crowding score and highlighted stress regimes
 
 # %%
 fig, ax = plt.subplots(figsize=(14, 6))
@@ -286,28 +275,28 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 8 — Basis vs next 1-hour returns
+# ## Chart 7 — Crowding score vs next 1-hour returns
 #
-# This scatter helps visualize whether richer or cheaper perp pricing tended to coincide with subsequent mean reversion or continuation.
+# This scatter helps visualize whether more crowded derivatives positioning tended to coincide with subsequent mean reversion or continuation.
 
 # %%
-scatter = derivs[["basis_bps", "next_1h_return_bps"]].dropna()
+scatter = derivs[["crowding_score", "next_1h_return_bps"]].dropna()
 fig, ax = plt.subplots()
 sns.regplot(
     data=scatter.sample(min(len(scatter), 4000), random_state=7),
-    x="basis_bps",
+    x="crowding_score",
     y="next_1h_return_bps",
     scatter_kws={"alpha": 0.2, "s": 20, "color": "#7c3aed"},
     line_kws={"color": "#111827", "linewidth": 2},
     ax=ax,
 )
-ax.set_title("Basis vs next 1-hour return")
-ax.set_xlabel("Basis (bps)")
+ax.set_title("Crowding score vs next 1-hour return")
+ax.set_xlabel("Crowding score")
 ax.set_ylabel("Forward return (bps)")
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 9 — Funding by weekday and hour
+# ## Chart 8 — Funding by weekday and hour
 
 # %%
 seasonality = derivs.assign(
