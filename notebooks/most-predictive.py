@@ -1,6 +1,6 @@
 # %% [markdown]
 # # Predicting Short-Term Crypto Returns with Market Microstructure
-##
+# #
 # There's a market microstructure metric that predicts short-term crypto returns
 # surprisingly well.
 # Most quants in this space know which one.
@@ -27,11 +27,6 @@ import numpy as np
 import pandas as pd
 from aperiodic import get_derivative_metrics, get_metrics, get_ohlcv
 from utils._aperiodic_demo import run_position_backtest
-
-try:
-    from dotenv import load_dotenv
-except ModuleNotFoundError:  # pragma: no cover
-    load_dotenv = None
 
 SYMBOL = "perpetual-BTC-USDT:USDT"
 EXCHANGE = "binance-futures"
@@ -64,9 +59,6 @@ METRICS = [
 RANK_WINDOWS = [100, 300, 600, 1200]
 COST_BPS = 0.0
 
-
-if load_dotenv is not None:
-    load_dotenv(".env")
 
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":

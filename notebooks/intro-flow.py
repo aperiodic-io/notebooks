@@ -39,7 +39,6 @@ from __future__ import annotations
 
 import os
 from datetime import date
-from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -47,7 +46,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from aperiodic import get_metrics, get_ohlcv
-from dotenv import load_dotenv
 
 sns.set_theme(style="whitegrid", context="talk", palette="deep")
 pd.options.display.float_format = "{:,.4f}".format
@@ -66,12 +64,11 @@ END_DATE = date(2026, 2, 28)
 START_TS = pd.Timestamp(START_DATE)
 END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
 
-WORKDIR = Path.cwd().resolve()
-ENV_PATH = WORKDIR / ".env"
-if not ENV_PATH.exists() and (WORKDIR.parent / ".env").exists():
-    ENV_PATH = WORKDIR.parent / ".env"
-load_dotenv(ENV_PATH)
-API_KEY = os.environ["APERIODIC_API_KEY"]
+API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
+if API_KEY == "...":
+    API_KEY = os.getenv("APERIODIC_API_KEY", "...")
+if API_KEY == "...":
+    raise RuntimeError("Set APERIODIC_API_KEY in the environment or in .env.")
 
 
 def clip_window(df: pd.DataFrame) -> pd.DataFrame:
