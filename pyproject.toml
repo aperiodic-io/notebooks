@@ -18,17 +18,34 @@ classifiers = [
 
 dependencies = [
     "aperiodic[pandas]",
+    "numpy",
+    "pandas",
     "pyarrow",
     "matplotlib",
+    "seaborn",
 ]
 
 [project.optional-dependencies]
-notebook = ["jupyter"]
+notebook = [
+    "ipykernel",
+    "jupyter",
+    "jupytext",
+    "nbconvert",
+]
 quality = ["ruff>=0.14.1", "jupytext"]
-export = ["jupyter", "nbconvert", "jupytext"]
+export = [
+    "ipykernel",
+    "jupyter",
+    "jupytext",
+    "nbconvert",
+]
+
+[tool.setuptools]
+py-modules = []
 
 [tool.ruff]
 target-version = "py311"
+extend-exclude = ["notebooks/*.py", "notebooks/*.ipynb"]
 
 [tool.ruff.lint]
 ignore = [
