@@ -40,6 +40,9 @@ export = [
     "nbconvert",
 ]
 
+[tool.setuptools]
+py-modules = []
+
 [tool.ruff]
 target-version = "py311"
 extend-exclude = ["notebooks/*.py", "notebooks/*.ipynb"]
