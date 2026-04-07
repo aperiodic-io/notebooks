@@ -66,6 +66,8 @@ START_DATE = date(2025, 9, 1)
 END_DATE = date(2026, 2, 28)
 START_TS = pd.Timestamp(START_DATE)
 END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
+CHART_ZOOM_START = pd.Timestamp(date(2025, 10, 9))
+CHART_ZOOM_END = pd.Timestamp(date(2025, 10, 11))
 
 WORKDIR = Path.cwd().resolve()
 ENV_PATH = WORKDIR / ".env"
@@ -149,15 +151,17 @@ summary = pd.Series(
 )
 summary
 
+l1_zoom = l1.loc[(l1["time"] >= CHART_ZOOM_START) & (l1["time"] < CHART_ZOOM_END)].copy()
+
 # %% [markdown]
 # ## Chart 1 — Best bid, best ask, and midprice
 
 # %%
 fig, ax = plt.subplots(figsize=(14, 6))
-ax.plot(l1["time"], l1["bid_price"], color="#16a34a", linewidth=1, label="Bid")
-ax.plot(l1["time"], l1["ask_price"], color="#dc2626", linewidth=1, label="Ask")
-ax.plot(l1["time"], l1["midprice"], color="#2563eb", linewidth=1.2, label="Mid")
-ax.set_title("Top-of-book bid, ask, and midpoint")
+ax.plot(l1_zoom["time"], l1_zoom["bid_price"], color="#16a34a", linewidth=1, label="Bid")
+ax.plot(l1_zoom["time"], l1_zoom["ask_price"], color="#dc2626", linewidth=1, label="Ask")
+ax.plot(l1_zoom["time"], l1_zoom["midprice"], color="#2563eb", linewidth=1.2, label="Mid")
+ax.set_title("Top-of-book bid, ask, and midpoint (Oct 9-10, 2025)")
 ax.set_ylabel("Price (USDT)")
 ax.legend(frameon=True, ncol=3)
 format_time_axis(ax)
@@ -168,9 +172,16 @@ plt.tight_layout()
 
 # %%
 fig, ax = plt.subplots()
-ax.plot(l1["time"], l1["midprice"], label="Midprice", color="#2563eb", linewidth=1)
-ax.plot(l1["time"], l1["weighted_midprice"], label="Weighted midprice", color="#7c3aed", linewidth=1, alpha=0.8)
-ax.set_title("Simple vs size-weighted midpoint")
+ax.plot(l1_zoom["time"], l1_zoom["midprice"], label="Midprice", color="#2563eb", linewidth=1)
+ax.plot(
+    l1_zoom["time"],
+    l1_zoom["weighted_midprice"],
+    label="Weighted midprice",
+    color="#7c3aed",
+    linewidth=1,
+    alpha=0.8,
+)
+ax.set_title("Simple vs size-weighted midpoint (Oct 9-10, 2025)")
 ax.legend(frameon=True)
 format_time_axis(ax)
 plt.tight_layout()
