@@ -118,18 +118,30 @@ jobs:
             fi
           done
 
-      - name: Execute and export notebooks to HTML
+      - name: Execute notebooks in place
+        run: |
+          for name in ${{ steps.resolve.outputs.names }}; do
+            nb="notebooks/${name}.ipynb"
+            [ -f "$nb" ] || continue
+            echo "Executing $name in place"
+            jupyter nbconvert \
+              --to notebook \
+              --inplace \
+              --execute \
+              --ExecutePreprocessor.timeout=300 \
+              --ExecutePreprocessor.kernel_name=python3 \
+              "$nb" || echo "WARNING: Failed to execute $name"
+          done
+
+      - name: Export notebooks to HTML
         run: |
           mkdir -p html
           for name in ${{ steps.resolve.outputs.names }}; do
             nb="notebooks/${name}.ipynb"
             [ -f "$nb" ] || continue
-            echo "Executing and exporting $name"
+            echo "Exporting $name to HTML"
             jupyter nbconvert \
               --to html \
-              --execute \
-              --ExecutePreprocessor.timeout=300 \
-              --ExecutePreprocessor.kernel_name=python3 \
               --template aperiodic \
               --HTMLExporter.extra_template_basedirs=./templates \
               --output-dir=html \
