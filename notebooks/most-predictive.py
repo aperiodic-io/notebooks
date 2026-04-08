@@ -58,6 +58,7 @@ METRICS = [
 
 RANK_WINDOWS = [100, 300, 600, 1200]
 COST_BPS = 0.0
+# Note: keeping a flat cost assumption here for a simple demo baseline.
 
 
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
