@@ -46,7 +46,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[export]"
+        run: uv pip install --system -e ".[export]" "aperiodic[pandas]" "polars"
 
       - name: Determine which notebooks to export
         id: resolve
@@ -120,34 +120,50 @@ jobs:
 
       - name: Execute notebooks in place
         run: |
+          failed=0
           for name in ${{ steps.resolve.outputs.names }}; do
             nb="notebooks/${name}.ipynb"
             [ -f "$nb" ] || continue
             echo "Executing $name in place"
-            jupyter nbconvert \
+            if ! jupyter nbconvert \
               --to notebook \
               --inplace \
               --execute \
               --ExecutePreprocessor.timeout=300 \
               --ExecutePreprocessor.kernel_name=python3 \
-              "$nb" || echo "WARNING: Failed to execute $name"
+              "$nb"; then
+              echo "ERROR: Failed to execute $name"
+              failed=1
+            fi
           done
+          if [ "$failed" -ne 0 ]; then
+            echo "One or more notebook executions failed."
+            exit 1
+          fi
 
       - name: Export notebooks to HTML
         run: |
           mkdir -p html
+          failed=0
           for name in ${{ steps.resolve.outputs.names }}; do
             nb="notebooks/${name}.ipynb"
             [ -f "$nb" ] || continue
             echo "Exporting $name to HTML"
-            jupyter nbconvert \
+            if ! jupyter nbconvert \
               --to html \
               --template aperiodic \
               --HTMLExporter.extra_template_basedirs=./templates \
               --output-dir=html \
               --output="$name.html" \
-              "$nb" || echo "WARNING: Failed to export $name"
+              "$nb"; then
+              echo "ERROR: Failed to export $name"
+              failed=1
+            fi
           done
+          if [ "$failed" -ne 0 ]; then
+            echo "One or more notebook exports failed."
+            exit 1
+          fi
 
       - name: Scrub API key from HTML outputs
         env:
