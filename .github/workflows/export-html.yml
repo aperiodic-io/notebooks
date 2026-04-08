@@ -46,7 +46,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[export]" "aperiodic[pandas]"
+        run: uv pip install --system -e ".[export]" "aperiodic[pandas]" "polars"
 
       - name: Determine which notebooks to export
         id: resolve
