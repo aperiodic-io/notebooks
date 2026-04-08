@@ -222,17 +222,7 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 6 — Distribution of the quoted spread
-
-# %%
-fig, ax = plt.subplots()
-ax.hist(l1["spread_bps"].dropna(), bins=80, color="#f59e0b", alpha=0.8, edgecolor="white")
-ax.set_title("Distribution of spread (bps)")
-ax.set_xlabel("Spread (bps)")
-plt.tight_layout()
-
-# %% [markdown]
-# ## Chart 7 — Weighted-mid premium and next 15-minute returns
+# ## Chart 6 — Weighted-mid premium and next 15-minute returns
 
 # %%
 scatter = l1[["weighted_mid_premium_bps", "next_15m_return_bps"]].dropna()
@@ -251,47 +241,16 @@ ax.set_ylabel("Forward return (bps)")
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 8 — Intraday spread seasonality
-
-# %%
-seasonality = l1.assign(
-    weekday=l1["time"].dt.day_name().str[:3],
-    hour=l1["time"].dt.hour,
-).pivot_table(index="weekday", columns="hour", values="spread_bps", aggfunc="mean")
-seasonality = seasonality.reindex(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
-
-fig, ax = plt.subplots(figsize=(16, 5))
-sns.heatmap(seasonality, cmap="YlOrRd", ax=ax)
-ax.set_title("Average spread by weekday and hour (bps)")
-ax.set_xlabel("Hour of day")
-ax.set_ylabel("")
-plt.tight_layout()
-
-# %% [markdown]
-# ## Chart 9 — Top-of-book size imbalance
+# ## Chart 7 — Top-of-book size imbalance
 
 # %%
 fig, ax = plt.subplots()
-ax.plot(l1["time"], l1["depth_imbalance"], color="#0891b2", linewidth=1)
+ax.plot(l1_zoom["time"], l1_zoom["depth_imbalance"], color="#0891b2", linewidth=1)
 ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
 ax.set_title("Depth imbalance at the best bid/ask")
 ax.set_ylabel("(bid size - ask size) / total size")
 format_time_axis(ax)
 plt.tight_layout()
-
-# %% [markdown]
-# ## Most active quote-update intervals
-
-# %%
-l1.nlargest(10, "quote_update_frequency")[[
-    "time",
-    "midprice",
-    "spread_bps",
-    "quote_update_frequency",
-    "bid_amount",
-    "ask_amount",
-    "weighted_mid_premium_bps",
-]].reset_index(drop=True)
 
 # %% [markdown]
 # ## Takeaways
