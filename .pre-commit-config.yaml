@@ -1,0 +1,8 @@
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        # Scans staged changes for secrets defined in .gitleaks.toml (including the
+        # custom Aperiodic UUID-format API key rule) before every local commit.
+        # Setup: pip install pre-commit && pre-commit install

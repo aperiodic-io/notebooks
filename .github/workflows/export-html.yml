@@ -169,19 +169,33 @@ jobs:
         env:
           APERIODIC_API_KEY: ${{ secrets.APERIODIC_API_KEY }}
         run: |
+          if [ -z "${APERIODIC_API_KEY:-}" ]; then
+            echo "ERROR: APERIODIC_API_KEY secret is empty — cannot scrub"
+            exit 1
+          fi
+          # .py sources: pattern-based match so a rotated key is still caught even
+          # if the secret value drifts from what was injected above.
+          UUID_RE='[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
           for f in notebooks/*.py; do
             [ -f "$f" ] || continue
-            sed -i "s|API_KEY = \"${APERIODIC_API_KEY}\"|API_KEY = \"...\"|g" "$f"
+            sed -i -E "s|API_KEY = \"${UUID_RE}\"|API_KEY = \"...\"|g" "$f"
           done
-          for f in notebooks/*.ipynb; do
-            [ -f "$f" ] || continue
-            sed -i "s|${APERIODIC_API_KEY}|...|g" "$f"
-          done
-          for f in html/*.html; do
+          # .ipynb and HTML: exact-value match to avoid clobbering Jupyter cell/widget
+          # UUIDs that share the same format but are not secrets.
+          for f in notebooks/*.ipynb html/*.html; do
             [ -f "$f" ] || continue
             sed -i "s|${APERIODIC_API_KEY}|...|g" "$f"
           done
           echo "Scrubbed API key from notebooks and HTML"
+
+      - name: Verify scrub — no secrets in working tree
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_$(uname -s | tr '[:upper:]' '[:lower:]')_x64.tar.gz \
+            | tar -xz gitleaks
+          # --no-git scans the working tree directly (not history), so it catches
+          # anything that survived the scrub step above before it can be committed.
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml
+          rm gitleaks
 
       - name: Commit generated notebooks and HTML
         if: github.event_name == 'push'

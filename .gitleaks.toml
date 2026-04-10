@@ -1,0 +1,16 @@
+[extend]
+useDefault = true
+
+# Ignore the historical commit where the key was present before the fix (PR #14 / commit 801cea7).
+# The key has since been rotated; this entry prevents the CI scan from failing on immutable history.
+[allowlist]
+description = "Pre-fix historical leak — key has been rotated"
+commits = ["801cea7dfaa631db8684088fcef229eaf7a69171"]
+
+# Catch any UUID-format value hard-coded into an API_KEY assignment.
+# This covers .py sources, .ipynb cell sources, and any future file type.
+[[rules]]
+id = "aperiodic-api-key"
+description = "Aperiodic API key (UUID format) hard-coded in source"
+regex = '''API_KEY\s*=\s*["'][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}["']'''
+tags = ["key", "aperiodic"]
