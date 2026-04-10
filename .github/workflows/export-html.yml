@@ -188,6 +188,15 @@ jobs:
           done
           echo "Scrubbed API key from notebooks and HTML"
 
+      - name: Verify scrub — no secrets in working tree
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_$(uname -s | tr '[:upper:]' '[:lower:]')_x64.tar.gz \
+            | tar -xz gitleaks
+          # --no-git scans the working tree directly (not history), so it catches
+          # anything that survived the scrub step above before it can be committed.
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml
+          rm gitleaks
+
       - name: Commit generated notebooks and HTML
         if: github.event_name == 'push'
         run: |
