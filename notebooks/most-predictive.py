@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import datetime
 import os
-from datetime import timedelta
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,8 +32,8 @@ EXCHANGE = "binance-futures"
 INTERVAL = "5m"
 TIMESTAMP = "exchange"  # local timestamp or "true"
 
-START_DATE = datetime.datetime.now(tz=datetime.UTC).date() - timedelta(days=365)
-END_DATE = datetime.datetime.now(tz=datetime.UTC).date()
+START_DATE = datetime.date(2025, 5, 1)
+END_DATE = datetime.date(2025, 5, 31)
 
 # For demonstration purposes, we'll use only the l2_imbalance metric category.
 METRICS = [
@@ -80,6 +79,7 @@ def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:
         start_date=START_DATE,
         end_date=END_DATE,
         show_progress=True,
+        preview=True,
     )
 
     # Ensure it's a pandas DataFrame
@@ -111,6 +111,7 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
         start_date=START_DATE,
         end_date=END_DATE,
         show_progress=True,
+        preview=True,
     )
 
     if hasattr(raw_ohlcv, "to_pandas"):
