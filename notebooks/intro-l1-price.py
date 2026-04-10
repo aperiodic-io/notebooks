@@ -264,3 +264,4 @@ plt.tight_layout()
 # - Aperiodic: https://aperiodic.io/
 # - Order books: https://www.binance.com/en/academy/articles/what-is-an-order-book-and-how-does-it-work
 # - Bid-ask spread: https://www.binance.com/en/academy/articles/bid-ask-spread-and-slippage-explained
+#
