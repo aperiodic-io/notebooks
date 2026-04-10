@@ -165,15 +165,23 @@ jobs:
             exit 1
           fi
 
-      - name: Scrub API key from HTML outputs
+      - name: Scrub API key from notebooks and HTML outputs
         env:
           APERIODIC_API_KEY: ${{ secrets.APERIODIC_API_KEY }}
         run: |
+          for f in notebooks/*.py; do
+            [ -f "$f" ] || continue
+            sed -i "s|API_KEY = \"${APERIODIC_API_KEY}\"|API_KEY = \"...\"|g" "$f"
+          done
+          for f in notebooks/*.ipynb; do
+            [ -f "$f" ] || continue
+            sed -i "s|${APERIODIC_API_KEY}|...|g" "$f"
+          done
           for f in html/*.html; do
             [ -f "$f" ] || continue
             sed -i "s|${APERIODIC_API_KEY}|...|g" "$f"
           done
-          echo "Scrubbed API key from $(ls html/*.html 2>/dev/null | wc -l) file(s)"
+          echo "Scrubbed API key from notebooks and HTML"
 
       - name: Commit generated notebooks and HTML
         if: github.event_name == 'push'
