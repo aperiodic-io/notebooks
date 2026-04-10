@@ -32,8 +32,8 @@ EXCHANGE = "binance-futures"
 INTERVAL = "5m"
 TIMESTAMP = "exchange"  # local timestamp or "true"
 
-START_DATE = datetime.date(2022, 1, 1)
-END_DATE = datetime.date(2022, 2, 1)
+START_DATE = datetime.date(2025, 5, 1)
+END_DATE = datetime.date(2025, 5, 31)
 
 # For demonstration purposes, we'll use only the l2_imbalance metric category.
 METRICS = [
