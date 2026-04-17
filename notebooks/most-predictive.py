@@ -78,6 +78,7 @@ def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:
         symbol=SYMBOL,
         start_date=START_DATE,
         end_date=END_DATE,
+        output="pandas",
         show_progress=True,
         preview=True,
     )
@@ -110,6 +111,7 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
         symbol=SYMBOL,
         start_date=START_DATE,
         end_date=END_DATE,
+        output="pandas",
         show_progress=True,
         preview=True,
     )
