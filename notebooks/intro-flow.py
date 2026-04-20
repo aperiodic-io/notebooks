@@ -10,8 +10,6 @@
 #     display_name: Python 3
 #     language: python
 #     name: python3
-#   aperiodic:
-#     uses_preview_data: true
 # ---
 
 # %% [markdown]
@@ -108,7 +106,6 @@ price = clip_window(
         end_date=END_DATE,
         output="pandas",
         show_progress=False,
-        preview=True,
     )
 )
 
@@ -124,7 +121,6 @@ flow = clip_window(
         end_date=END_DATE,
         output="pandas",
         show_progress=False,
-        preview=True,
     )
 )
 
