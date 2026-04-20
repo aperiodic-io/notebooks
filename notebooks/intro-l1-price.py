@@ -10,6 +10,8 @@
 #     display_name: Python 3
 #     language: python
 #     name: python3
+#   aperiodic:
+#     uses_preview_data: true
 # ---
 
 # %% [markdown]
