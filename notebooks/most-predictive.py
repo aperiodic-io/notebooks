@@ -1,3 +1,5 @@
+# aperiodic: uses_preview_data
+
 # %% [markdown]
 # # Predicting Short-Term Crypto Returns with Market Microstructure
 # #
