@@ -102,6 +102,7 @@ price = clip_window(
         end_date=END_DATE,
         output="pandas",
         show_progress=False,
+        preview=True,
     )
 )[["time", "close"]]
 
@@ -117,6 +118,7 @@ l1 = clip_window(
         end_date=END_DATE,
         output="pandas",
         show_progress=False,
+        preview=True,
     )
 )
 
