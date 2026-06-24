@@ -1,15 +1,31 @@
+# ---
+# jupyter:
+#   aperiodic:
+#     uses_preview_data: true
+#   jupytext:
+#     notebook_metadata_filter: aperiodic
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.19.4
+#   kernelspec:
+#     display_name: Python 3
+#     language: python
+#     name: python3
+# ---
+
+# %%
 # aperiodic: uses_preview_data
 
 # %% [markdown]
-# # Predicting Short-Term Crypto Returns with Market Microstructure
+# # Alpha Discovery with Market Microstructure
 # #
-# There's a market microstructure metric that predicts short-term crypto returns
-# surprisingly well.
-# Most quants in this space know which one.
+# This notebook turns the original demo into a broader alpha-discovery workflow
+# across the available market microstructure feature set.
 #
-# This notebook names it, walks through the methodology, and lets you run the same
-# analysis
-# to surface similar signals yourself.
+# It scans a wider metric universe, ranks the strongest short-term predictors,
+# and surfaces the best candidate signals for follow-up research.
 # Rolling percentile rank is a simple but effective transformation to transform an
 # arbitrary time series into a (close to) uniform distribution signal, and can
 # easily work as-is for simplistic backtests as well.
@@ -37,24 +53,24 @@ TIMESTAMP = "exchange"  # local timestamp or "true"
 START_DATE = datetime.date(2025, 5, 1)
 END_DATE = datetime.date(2025, 5, 31)
 
-# For demonstration purposes, we'll use only the l2_imbalance metric category.
+# Enable the broader metric set for alpha discovery.
 METRICS = [
-    # ("basis", "derivative"),
-    # ("funding", "derivative"),
-    # ("open_interest", "derivative"),
-    # ("flow", "regular"),
-    # ("impact", "regular"),
+    ("basis", "derivative"),
+    ("funding", "derivative"),
+    ("open_interest", "derivative"),
+    ("flow", "regular"),
+    ("impact", "regular"),
     # ("l1_imbalance", "regular"),
     # ("l1_liquidity", "regular"),
-    ("l2_imbalance", "regular"),
+    # ("l2_imbalance", "regular"),
     # ("l2_liquidity", "regular"),
-    # ("returns", "regular"),
-    # ("slippage", "regular"),
-    # ("trade_size", "regular"),
-    # ("updownticks", "regular"),
-    # ("run_structure", "regular"),
-    # ("vtwap", "regular"),
-    # ("range", "regular"),
+    ("returns", "regular"),
+    ("slippage", "regular"),
+    ("trade_size", "regular"),
+    ("updownticks", "regular"),
+    ("run_structure", "regular"),
+    ("vtwap", "regular"),
+    ("range", "regular"),
 ]
 
 RANK_WINDOWS = [100, 300, 600, 1200]
@@ -89,6 +105,7 @@ def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:
     df = raw_df.to_pandas() if hasattr(raw_df, "to_pandas") else pd.DataFrame(raw_df)
 
     if df.empty or "time" not in df.columns:
+        print(f"Skipping {metric}: no rows returned.")
         return None
 
     # Select numeric columns
@@ -97,6 +114,7 @@ def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:
         numeric_cols.remove("time")
 
     if not numeric_cols:
+        print(f"Skipping {metric}: no numeric columns returned.")
         return None
 
     return df.sort_values("time").drop_duplicates(subset=["time"], keep="last")[
@@ -127,8 +145,15 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
 
     for metric, kind in METRICS:
         frame = get_numeric_metric_frame(metric, kind)
-        if frame is not None:
-            panel = panel.merge(frame, on="time", how="left")
+        if frame is None:
+            continue
+
+        numeric_feature_cols = [col for col in frame.columns if col != "time"]
+        if frame[numeric_feature_cols].notna().sum().sum() == 0:
+            print(f"Skipping {metric}: all feature values are null.")
+            continue
+
+        panel = panel.merge(frame, on="time", how="left")
 
     panel = panel.sort_values("time")
     panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
@@ -171,15 +196,26 @@ for feature in feature_cols:
 
         print(f"Testing {feature} | window {window}: {mask.sum()} valid observations")
 
-        fit_corr = float(np.corrcoef(signal_raw[mask], forward_returns[mask])[0, 1])
+        signal_valid = signal_raw[mask]
+        returns_valid = forward_returns[mask]
+        if (
+            signal_valid.size < 2
+            or np.std(signal_valid) == 0.0
+            or np.std(returns_valid) == 0.0
+        ):
+            continue
+
+        fit_corr = float(np.corrcoef(signal_valid, returns_valid)[0, 1])
+        if not np.isfinite(fit_corr):
+            continue
 
         direction = 1 if fit_corr >= 0 else -1
         bt_frame, bt_summary = run_position_backtest(
             timestamps=panel.loc[mask, "time"],
             position=np.nan_to_num(
-                np.clip(signal_raw[mask] * direction, -1.0, 1.0), nan=0.0
+                np.clip(signal_valid * direction, -1.0, 1.0), nan=0.0
             ),
-            forward_return=forward_returns[mask],
+            forward_return=returns_valid,
             cost_bps_one_way=COST_BPS,
         )
 
@@ -195,8 +231,14 @@ for feature in feature_cols:
             }
         )
 
+if not results:
+    raise RuntimeError(
+        "No valid feature/window combinations were produced. "
+        "Check the fetched metric coverage for the selected date range."
+    )
+
 results_df = pd.DataFrame(results).sort_values("sharpe", ascending=False)
-print(results_df)
+print(results_df.head(50).to_markdown(index=False))
 
 # %% [markdown]
 # ## Microstructure Takeaways
@@ -249,6 +291,9 @@ plt.show()
 mask = np.isfinite(signal) & np.isfinite(forward_returns)
 signal_valid = signal[mask]
 returns_valid = forward_returns[mask]
+
+if signal_valid.size == 0:
+    raise RuntimeError("Best strategy produced no valid observations for decile analysis.")
 
 order = np.argsort(signal_valid)
 deciles = np.empty(signal_valid.shape[0], dtype=np.int64)
