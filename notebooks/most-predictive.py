@@ -198,19 +198,17 @@ for feature in feature_cols:
 
         print(f"Testing {feature} | window {window}: {mask.sum()} valid observations")
 
-        if mask.sum() < 2:
-            print(f"Skipping {feature} | window {window}: not enough valid observations")
-            continue
-
         signal_valid = signal_raw[mask]
         returns_valid = forward_returns[mask]
-        if np.std(signal_valid) == 0.0 or np.std(returns_valid) == 0.0:
-            print(f"Skipping {feature} | window {window}: zero-variance input")
+        if (
+            signal_valid.size < 2
+            or np.std(signal_valid) == 0.0
+            or np.std(returns_valid) == 0.0
+        ):
             continue
 
         fit_corr = float(np.corrcoef(signal_valid, returns_valid)[0, 1])
         if not np.isfinite(fit_corr):
-            print(f"Skipping {feature} | window {window}: correlation is not finite")
             continue
 
         direction = 1 if fit_corr >= 0 else -1
@@ -242,7 +240,7 @@ if not results:
     )
 
 results_df = pd.DataFrame(results).sort_values("sharpe", ascending=False)
-print(results_df)
+print(results_df.head(50).to_markdown(index=False))
 
 # %% [markdown]
 # ## Microstructure Takeaways
