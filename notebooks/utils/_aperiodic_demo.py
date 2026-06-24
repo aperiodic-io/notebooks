@@ -47,6 +47,17 @@ def run_position_backtest(
     # Equity curve (cumulative product of 1 + per-bar return)
     equity = np.cumprod(1.0 + net_pnl)
 
+    if equity.size == 0:
+        bt_frame = pd.DataFrame(
+            {"timestamp": timestamps.to_numpy(), "equity_curve": equity}
+        )
+        bt_summary = {
+            "annualized_sharpe": 0.0,
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+        }
+        return bt_frame, bt_summary
+
     # Running maximum for drawdown calculation
     running_max = np.maximum.accumulate(equity)
     drawdowns = (equity - running_max) / running_max
@@ -56,9 +67,13 @@ def run_position_backtest(
     bars_per_year = 288 * 365
     mean_ret = float(np.mean(net_pnl))
     std_ret = float(np.std(net_pnl, ddof=1)) if len(net_pnl) > 1 else 1.0
-    annualized_sharpe = (mean_ret / std_ret) * np.sqrt(bars_per_year) if std_ret > 0 else 0.0
+    annualized_sharpe = (
+        (mean_ret / std_ret) * np.sqrt(bars_per_year) if std_ret > 0 else 0.0
+    )
 
-    net_return_pct = float((equity[-1] / equity[0] - 1.0) * 100.0) if len(equity) > 0 else 0.0
+    net_return_pct = (
+        float((equity[-1] / equity[0] - 1.0) * 100.0) if len(equity) > 0 else 0.0
+    )
 
     bt_frame = pd.DataFrame(
         {
