@@ -146,15 +146,16 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
         panel = panel.merge(frame, on="time", how="left")
 
     panel = panel.sort_values("time")
-    panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
-    panel = panel.dropna(subset=["fwd_ret"])
-
     feature_cols = [
         col
         for col in panel.columns
-        if col not in {"time", "close", "fwd_ret"}
+        if col not in {"time", "close"}
         and pd.api.types.is_numeric_dtype(panel[col])
     ]
+
+    panel[feature_cols] = panel[feature_cols].ffill()
+    panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
+    panel = panel.dropna(subset=["fwd_ret"])
 
     print(f"Panel built: {len(panel)} rows. Found {len(feature_cols)} features.")
     return panel, feature_cols
