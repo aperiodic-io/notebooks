@@ -21,16 +21,12 @@
 # %% [markdown]
 # # Alpha Discovery with Market Microstructure
 # #
-# This notebook turns the original demo into a broader alpha-discovery workflow
-# across the available market microstructure feature set.
+# This notebook extends the alpha-discovery workflow by searching two dimensions:
+# rank-window normalization and moving-average smoothing.
 #
-# It scans a wider metric universe, ranks the strongest short-term predictors,
-# and surfaces the best candidate signals for follow-up research.
-# Rolling percentile rank is a simple but effective transformation to transform an
-# arbitrary time series into a (close to) uniform distribution signal, and can
-# easily work as-is for simplistic backtests as well.
-#
-
+# Each feature is converted into a rolling percentile-rank signal, then optionally
+# smoothed with a short moving average to reduce noise before evaluating the next-bar
+# return relationship and a simple position backtest.
 
 # %%
 
@@ -53,7 +49,6 @@ TIMESTAMP = "exchange"  # local timestamp or "true"
 START_DATE = datetime.date(2025, 5, 1)
 END_DATE = datetime.date(2025, 5, 31)
 
-# Enable the broader metric set for alpha discovery.
 METRICS = [
     ("basis", "derivative"),
     ("funding", "derivative"),
@@ -73,10 +68,9 @@ METRICS = [
     ("range", "regular"),
 ]
 
-RANK_WINDOWS = [100, 300, 600, 1200]
-COST_BPS = 0.0
-# Note: keeping a flat cost assumption here for a simple demo baseline.
-
+RANK_WINDOWS = [100, 300, 600, 1200, 2400]
+SMOOTH_WINDOWS = [None, 10, 50, 100, 200, 400]
+COST_BPS = 1.0
 
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
@@ -101,14 +95,12 @@ def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:
         preview=True,
     )
 
-    # Ensure it's a pandas DataFrame
     df = raw_df.to_pandas() if hasattr(raw_df, "to_pandas") else pd.DataFrame(raw_df)
 
     if df.empty or "time" not in df.columns:
         print(f"Skipping {metric}: no rows returned.")
         return None
 
-    # Select numeric columns
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     if "time" in numeric_cols:
         numeric_cols.remove("time")
@@ -136,11 +128,9 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
         preview=True,
     )
 
-    if hasattr(raw_ohlcv, "to_pandas"):
-        panel = raw_ohlcv.to_pandas()
-    else:
-        panel = pd.DataFrame(raw_ohlcv)
-
+    panel = (
+        raw_ohlcv.to_pandas() if hasattr(raw_ohlcv, "to_pandas") else pd.DataFrame(raw_ohlcv)
+    )
     panel = panel.sort_values("time")[["time", "close"]]
 
     for metric, kind in METRICS:
@@ -156,24 +146,39 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
         panel = panel.merge(frame, on="time", how="left")
 
     panel = panel.sort_values("time")
-    panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
-    panel = panel.dropna(subset=["fwd_ret"])
-
     feature_cols = [
         col
         for col in panel.columns
-        if col not in {"time", "close", "fwd_ret"}
+        if col not in {"time", "close"}
         and pd.api.types.is_numeric_dtype(panel[col])
     ]
+
+    panel[feature_cols] = panel[feature_cols].ffill()
+    panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
+    panel = panel.dropna(subset=["fwd_ret"])
 
     print(f"Panel built: {len(panel)} rows. Found {len(feature_cols)} features.")
     return panel, feature_cols
 
 
-def make_signal(panel_df: pd.DataFrame, feature: str, window: int) -> np.ndarray:
+def make_rank_signal(panel_df: pd.DataFrame, feature: str, window: int) -> np.ndarray:
     rank = panel_df[feature].rolling(window).rank(method="average")
     signal = ((rank - 1.0) / (window - 1)) * 2.0 - 1.0
     return signal.to_numpy().astype(np.float64)
+
+
+def smooth_signal(signal: np.ndarray, window: int | None) -> np.ndarray:
+    if window is None or pd.isna(window) or int(window) == 1:
+        return signal.astype(np.float64, copy=True)
+
+    normalized_window = int(window)
+    return (
+        pd.Series(signal)
+        .rolling(normalized_window)
+        .mean()
+        .to_numpy()
+        .astype(np.float64)
+    )
 
 
 panel, feature_cols = build_panel()
@@ -184,52 +189,53 @@ print(panel.head())
 
 
 # %%
-# Calculate forward returns, information coefficient, and backtest for each
-# metric and window combination.
+# Evaluate each feature across rank windows and smoothing windows.
 forward_returns = panel["fwd_ret"].to_numpy().astype(np.float64)
 results = []
 
 for feature in feature_cols:
-    for window in RANK_WINDOWS:
-        signal_raw = make_signal(panel, feature, window)
-        mask = np.isfinite(signal_raw) & np.isfinite(forward_returns)
+    for rank_window in RANK_WINDOWS:
+        raw_signal = make_rank_signal(panel, feature, rank_window)
 
-        print(f"Testing {feature} | window {window}: {mask.sum()} valid observations")
+        for smooth_window in SMOOTH_WINDOWS:
+            signal = smooth_signal(raw_signal, smooth_window)
+            mask = np.isfinite(signal) & np.isfinite(forward_returns)
 
-        signal_valid = signal_raw[mask]
-        returns_valid = forward_returns[mask]
-        if (
-            signal_valid.size < 2
-            or np.std(signal_valid) == 0.0
-            or np.std(returns_valid) == 0.0
-        ):
-            continue
+            signal_valid = signal[mask]
+            returns_valid = forward_returns[mask]
+            if (
+                signal_valid.size < 2
+                or np.std(signal_valid) == 0.0
+                or np.std(returns_valid) == 0.0
+            ):
+                continue
 
-        fit_corr = float(np.corrcoef(signal_valid, returns_valid)[0, 1])
-        if not np.isfinite(fit_corr):
-            continue
+            fit_corr = float(np.corrcoef(signal_valid, returns_valid)[0, 1])
+            if not np.isfinite(fit_corr):
+                continue
 
-        direction = 1 if fit_corr >= 0 else -1
-        bt_frame, bt_summary = run_position_backtest(
-            timestamps=panel.loc[mask, "time"],
-            position=np.nan_to_num(
-                np.clip(signal_valid * direction, -1.0, 1.0), nan=0.0
-            ),
-            forward_return=returns_valid,
-            cost_bps_one_way=COST_BPS,
-        )
+            direction = 1 if fit_corr >= 0 else -1
+            _, bt_summary = run_position_backtest(
+                timestamps=panel.loc[mask, "time"],
+                position=np.nan_to_num(
+                    np.clip(signal_valid * direction, -1.0, 1.0), nan=0.0
+                ),
+                forward_return=returns_valid,
+                cost_bps_one_way=COST_BPS,
+            )
 
-        results.append(
-            {
-                "feature": feature,
-                "window": window,
-                "direction": direction,
-                "fit_corr": fit_corr,
-                "sharpe": bt_summary["annualized_sharpe"],
-                "total_return": bt_summary["net_return_pct"],
-                "max_drawdown": bt_summary["max_drawdown_pct"],
-            }
-        )
+            results.append(
+                {
+                    "feature": feature,
+                    "rank_window": rank_window,
+                    "smooth_window": smooth_window,
+                    "direction": direction,
+                    "fit_corr": fit_corr,
+                    "sharpe": bt_summary["annualized_sharpe"],
+                    "total_return": bt_summary["net_return_pct"],
+                    "max_drawdown": bt_summary["max_drawdown_pct"],
+                }
+            )
 
 if not results:
     raise RuntimeError(
@@ -241,23 +247,26 @@ results_df = pd.DataFrame(results).sort_values("sharpe", ascending=False)
 print(results_df.head(50).to_markdown(index=False))
 
 # %% [markdown]
-# ## Microstructure Takeaways
+# ## Takeaways
 #
-# Note that all of the backtests here are net of transaction costs.
-#
-# - The metric presented here has high turnover and is most predictive on lower timeframes.
-# - Market microstructure metrics can be used to enhance directional strategies
-#   and extend existing signals.
-# - They can also act as regime filters to help decide when broader
-#   trend-following ideas are more or less effective.
+# Moving-average smoothing adds a second degree of freedom to the alpha search.
+# Short smoothing windows can suppress microstructure noise, while longer windows
+# can expose more persistent order-flow or positioning regimes.
 
 # %%
 best = results_df.iloc[0].to_dict()
 best_feature = str(best["feature"])
-best_window = int(best["window"])
+best_rank_window = int(best["rank_window"])
+best_smooth_window = best["smooth_window"]
 best_direction = int(best["direction"])
 
-signal = make_signal(panel, best_feature, best_window) * best_direction
+best_smooth_window_label = (
+    "None" if best_smooth_window is None or pd.isna(best_smooth_window) else best_smooth_window
+)
+
+raw_signal = make_rank_signal(panel, best_feature, best_rank_window)
+signal = smooth_signal(raw_signal, best_smooth_window) * best_direction
+
 mask = np.isfinite(signal) & np.isfinite(forward_returns)
 bt_frame, bt_summary = run_position_backtest(
     timestamps=panel.loc[mask, "time"],
@@ -270,19 +279,27 @@ equity = bt_frame["equity_curve"]
 print("Best Strategy found:")
 print(best)
 
-fig, axes = plt.subplots(2, 1, figsize=(14, 6), sharex=True)
-axes[0].plot(panel["time"], signal, linewidth=0.9, color="tab:red")
+fig, axes = plt.subplots(3, 1, figsize=(14, 8), sharex=True)
+axes[0].plot(panel["time"], raw_signal, linewidth=0.8, color="tab:orange")
 axes[0].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
-axes[0].set_title(
-    f"Signal: {best_feature} | window={best_window} | dir={best_direction}"
-)
+axes[0].set_title(f"Raw percentile-rank signal: {best_feature}")
 axes[0].grid(alpha=0.2)
 
-axes[1].plot(bt_frame["timestamp"], equity, linewidth=1.1, color="tab:green")
+axes[1].plot(panel["time"], signal, linewidth=0.9, color="tab:red")
+axes[1].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
 axes[1].set_title(
-    f"Equity | Sharpe={best['sharpe']:.3f} | TotalRet={best['total_return']:.3f}"
+    "Smoothed signal"
+    f" | rank_window={best_rank_window}"
+    f" | smooth_window={best_smooth_window_label}"
+    f" | dir={best_direction}"
 )
 axes[1].grid(alpha=0.2)
+
+axes[2].plot(bt_frame["timestamp"], equity, linewidth=1.1, color="tab:green")
+axes[2].set_title(
+    f"Equity | Sharpe={best['sharpe']:.3f} | TotalRet={best['total_return']:.3f}"
+)
+axes[2].grid(alpha=0.2)
 
 fig.tight_layout()
 plt.show()
@@ -314,7 +331,7 @@ deciles_df = pd.DataFrame(
 fig, ax = plt.subplots(figsize=(10, 4))
 ax.bar(deciles_df["decile"], deciles_df["mean_fwd_ret"], color="tab:blue", alpha=0.85)
 ax.axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
-ax.set_title("Mean forward return by signal decile")
+ax.set_title("Mean forward return by smoothed signal decile")
 ax.set_xlabel("Decile")
 ax.set_ylabel("Mean next-bar return")
 ax.grid(alpha=0.2, axis="y")
@@ -323,20 +340,60 @@ plt.show()
 
 print(deciles_df)
 
+# %%
+best_feature_results = results_df.loc[
+    results_df["feature"] == best_feature,
+    ["rank_window", "smooth_window", "sharpe"],
+].copy()
+heatmap = best_feature_results.pivot(
+    index="rank_window", columns="smooth_window", values="sharpe"
+).sort_index()
+
+heatmap = heatmap.rename(columns={None: "None"})
+
+fig, ax = plt.subplots(figsize=(8, 4))
+image = ax.imshow(heatmap.to_numpy(), aspect="auto", cmap="RdYlGn")
+ax.set_title(f"Sharpe by window combination for {best_feature}")
+ax.set_xlabel("Smooth window")
+ax.set_ylabel("Rank window")
+ax.set_xticks(np.arange(len(heatmap.columns)), labels=heatmap.columns)
+ax.set_yticks(np.arange(len(heatmap.index)), labels=heatmap.index)
+
+for row_idx, row in enumerate(heatmap.to_numpy()):
+    for col_idx, value in enumerate(row):
+        ax.text(col_idx, row_idx, f"{value:.2f}", ha="center", va="center", fontsize=9)
+
+fig.colorbar(image, ax=ax, label="Annualized Sharpe")
+fig.tight_layout()
+plt.show()
 
 # %% [markdown]
 # ## Next Steps
 #
-# Note that all of the backtests here are net of transaction costs.
-#
-# - The metric presented here has high turnover and is most predictive on lower timeframes.
-# - Market microstructure metrics can be used to enhance directional strategies
-#   and extend existing signals.
-# - They can also act as regime filters to help decide when broader
-#   trend-following ideas are more or less effective.
-#
-# Register at [Aperiodic.io](https://aperiodic.io) to run an interactive version
-# of this notebook
-# with access to all available market microstructure metrics.
-#
-#
+# - Compare whether smoothing improves stability out of sample or only in-sample fit.
+# - Re-run the search on longer date ranges and alternate venues to check persistence.
+# - Use the best-ranked smoothed signals as regime filters for broader strategies.
+
+# %%
+top_feature_summary = (
+    results_df.groupby("feature", as_index=False)["sharpe"]
+    .max()
+    .sort_values("sharpe", ascending=False)
+    .head(20)
+)
+
+print("Top 20 features by best Sharpe:")
+print(top_feature_summary.to_markdown(index=False))
+
+for feature in top_feature_summary["feature"]:
+    feature_results = results_df.loc[
+        results_df["feature"] == feature,
+        ["rank_window", "smooth_window", "sharpe"],
+    ].copy()
+    feature_heatmap = feature_results.pivot(
+        index="rank_window", columns="smooth_window", values="sharpe"
+    ).sort_index()
+    feature_heatmap = feature_heatmap.rename(columns={None: "None"})
+
+    print(f"\nSharpe by window combination for {feature}:")
+    print(feature_heatmap.to_markdown())
