@@ -68,9 +68,9 @@ METRICS = [
     ("range", "regular"),
 ]
 
-RANK_WINDOWS = [100, 300, 600, 1200]
-SMOOTH_WINDOWS = [1, 5, 10, 15, 50]
-COST_BPS = 0.0
+RANK_WINDOWS = [100, 300, 600, 1200, 2400]
+SMOOTH_WINDOWS = [None, 10, 50, 100, 200, 400]
+COST_BPS = 1.0
 
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
@@ -161,18 +161,24 @@ def build_panel() -> tuple[pd.DataFrame, list[str]]:
     return panel, feature_cols
 
 
-def smooth_feature(panel_df: pd.DataFrame, feature: str, window: int) -> np.ndarray:
-    values = panel_df[feature].to_numpy().astype(np.float64)
-    if window <= 1:
-        return values.copy()
-
-    return pd.Series(values).rolling(window).mean().to_numpy().astype(np.float64)
-
-
-def make_rank_signal(values: np.ndarray, window: int) -> np.ndarray:
-    rank = pd.Series(values).rolling(window).rank(method="average")
+def make_rank_signal(panel_df: pd.DataFrame, feature: str, window: int) -> np.ndarray:
+    rank = panel_df[feature].rolling(window).rank(method="average")
     signal = ((rank - 1.0) / (window - 1)) * 2.0 - 1.0
     return signal.to_numpy().astype(np.float64)
+
+
+def smooth_signal(signal: np.ndarray, window: int | None) -> np.ndarray:
+    if window is None or pd.isna(window) or int(window) == 1:
+        return signal.astype(np.float64, copy=True)
+
+    normalized_window = int(window)
+    return (
+        pd.Series(signal)
+        .rolling(normalized_window)
+        .mean()
+        .to_numpy()
+        .astype(np.float64)
+    )
 
 
 panel, feature_cols = build_panel()
@@ -188,18 +194,12 @@ forward_returns = panel["fwd_ret"].to_numpy().astype(np.float64)
 results = []
 
 for feature in feature_cols:
-    for smooth_window in SMOOTH_WINDOWS:
-        smoothed_feature = smooth_feature(panel, feature, smooth_window)
+    for rank_window in RANK_WINDOWS:
+        raw_signal = make_rank_signal(panel, feature, rank_window)
 
-        for rank_window in RANK_WINDOWS:
-            signal = make_rank_signal(smoothed_feature, rank_window)
+        for smooth_window in SMOOTH_WINDOWS:
+            signal = smooth_signal(raw_signal, smooth_window)
             mask = np.isfinite(signal) & np.isfinite(forward_returns)
-
-            print(
-                "Testing "
-                f"{feature} | rank_window {rank_window} | smooth_window {smooth_window}: "
-                f"{mask.sum()} valid observations"
-            )
 
             signal_valid = signal[mask]
             returns_valid = forward_returns[mask]
@@ -257,11 +257,15 @@ print(results_df.head(50).to_markdown(index=False))
 best = results_df.iloc[0].to_dict()
 best_feature = str(best["feature"])
 best_rank_window = int(best["rank_window"])
-best_smooth_window = int(best["smooth_window"])
+best_smooth_window = best["smooth_window"]
 best_direction = int(best["direction"])
 
-smoothed_feature = smooth_feature(panel, best_feature, best_smooth_window)
-signal = make_rank_signal(smoothed_feature, best_rank_window) * best_direction
+best_smooth_window_label = (
+    "None" if best_smooth_window is None or pd.isna(best_smooth_window) else best_smooth_window
+)
+
+raw_signal = make_rank_signal(panel, best_feature, best_rank_window)
+signal = smooth_signal(raw_signal, best_smooth_window) * best_direction
 
 mask = np.isfinite(signal) & np.isfinite(forward_returns)
 bt_frame, bt_summary = run_position_backtest(
@@ -276,38 +280,27 @@ print("Best Strategy found:")
 print(best)
 
 fig, axes = plt.subplots(3, 1, figsize=(14, 8), sharex=True)
-axes[0].plot(panel["time"], panel[best_feature], linewidth=0.8, color="tab:orange")
+axes[0].plot(panel["time"], raw_signal, linewidth=0.8, color="tab:orange")
 axes[0].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
-axes[0].set_title(f"Raw feature: {best_feature}")
+axes[0].set_title(f"Raw percentile-rank signal: {best_feature}")
 axes[0].grid(alpha=0.2)
 
-axes[1].plot(panel["time"], smoothed_feature, linewidth=0.9, color="tab:red")
+axes[1].plot(panel["time"], signal, linewidth=0.9, color="tab:red")
 axes[1].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
 axes[1].set_title(
-    "Smoothed feature"
-    f" | smooth_window={best_smooth_window}"
+    "Smoothed signal"
+    f" | rank_window={best_rank_window}"
+    f" | smooth_window={best_smooth_window_label}"
+    f" | dir={best_direction}"
 )
 axes[1].grid(alpha=0.2)
 
-axes[2].plot(panel["time"], make_rank_signal(smoothed_feature, best_rank_window) * best_direction, linewidth=0.9, color="tab:purple")
-axes[2].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
+axes[2].plot(bt_frame["timestamp"], equity, linewidth=1.1, color="tab:green")
 axes[2].set_title(
-    "Ranked trading signal"
-    f" | rank_window={best_rank_window}"
-    f" | smooth_window={best_smooth_window}"
-    f" | dir={best_direction}"
+    f"Equity | Sharpe={best['sharpe']:.3f} | TotalRet={best['total_return']:.3f}"
 )
 axes[2].grid(alpha=0.2)
 
-fig.tight_layout()
-plt.show()
-
-fig, ax = plt.subplots(figsize=(14, 3))
-ax.plot(bt_frame["timestamp"], equity, linewidth=1.1, color="tab:green")
-ax.set_title(
-    f"Equity | Sharpe={best['sharpe']:.3f} | TotalRet={best['total_return']:.3f}"
-)
-ax.grid(alpha=0.2)
 fig.tight_layout()
 plt.show()
 
@@ -356,6 +349,8 @@ heatmap = best_feature_results.pivot(
     index="rank_window", columns="smooth_window", values="sharpe"
 ).sort_index()
 
+heatmap = heatmap.rename(columns={None: "None"})
+
 fig, ax = plt.subplots(figsize=(8, 4))
 image = ax.imshow(heatmap.to_numpy(), aspect="auto", cmap="RdYlGn")
 ax.set_title(f"Sharpe by window combination for {best_feature}")
@@ -378,3 +373,27 @@ plt.show()
 # - Compare whether smoothing improves stability out of sample or only in-sample fit.
 # - Re-run the search on longer date ranges and alternate venues to check persistence.
 # - Use the best-ranked smoothed signals as regime filters for broader strategies.
+
+# %%
+top_feature_summary = (
+    results_df.groupby("feature", as_index=False)["sharpe"]
+    .max()
+    .sort_values("sharpe", ascending=False)
+    .head(20)
+)
+
+print("Top 20 features by best Sharpe:")
+print(top_feature_summary.to_markdown(index=False))
+
+for feature in top_feature_summary["feature"]:
+    feature_results = results_df.loc[
+        results_df["feature"] == feature,
+        ["rank_window", "smooth_window", "sharpe"],
+    ].copy()
+    feature_heatmap = feature_results.pivot(
+        index="rank_window", columns="smooth_window", values="sharpe"
+    ).sort_index()
+    feature_heatmap = feature_heatmap.rename(columns={None: "None"})
+
+    print(f"\nSharpe by window combination for {feature}:")
+    print(feature_heatmap.to_markdown())
