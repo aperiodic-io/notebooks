@@ -24,11 +24,15 @@ from IPython.display import HTML
 from ._aperiodic_demo import run_position_backtest
 
 # The roadmap groups the six steps into three phases, each with its own color.
-# Each step is (number, line 1, line 2, icon key).
+# Colors track the Aperiodic brand palette (see templates/aperiodic): the accent
+# triad is blue #5a9fd4, terracotta #d4845a, and green #72b866. Those values are
+# tuned for the dark theme, so here we use deepened variants that read on the warm
+# light background (--ap-bg #faf8f5) and invert back toward the brand accents in
+# dark mode. Each step is (number, line 1, line 2, icon key).
 _PIPELINE_PHASES = [
-    {"name": "CONSTRUCTION", "color": "#3b6ea5", "steps": (0, 1)},
-    {"name": "SEARCH", "color": "#715aa6", "steps": (2, 3)},
-    {"name": "VALIDATION", "color": "#2e8b6b", "steps": (4, 5)},
+    {"name": "CONSTRUCTION", "color": "#3f78ad", "steps": (0, 1)},
+    {"name": "SEARCH", "color": "#c0703f", "steps": (2, 3)},
+    {"name": "VALIDATION", "color": "#4f8a50", "steps": (4, 5)},
 ]
 _PIPELINE_STEPS = [
     ("1", "Load &amp;", "inspect", "table"),
@@ -38,8 +42,15 @@ _PIPELINE_STEPS = [
     ("5", "Examine", "best", "lens"),
     ("6", "Robustness", "check", "shield"),
 ]
-_DIAGRAM_TEXT = "#33302b"
-_DIAGRAM_ARROW = "#9b9488"
+# Neutral tokens mirror the Aperiodic export theme: text --ap-text #333, a warm
+# taupe rule, and the Mona Sans font stack (falls back to system fonts in the
+# standalone image, matching the template's own fallback).
+_DIAGRAM_TEXT = "#333333"
+_DIAGRAM_ARROW = "#a89a86"
+_DIAGRAM_FONT = (
+    "'Mona Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', "
+    "Helvetica, Arial, sans-serif"
+)
 
 
 def _phase_color(step_idx: int) -> str:
@@ -111,9 +122,9 @@ def pipeline_diagram() -> HTML:
         return 2 + idx * (node_w + gap)
 
     parts = [
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 180" '
-        'role="img" aria-label="Alpha discovery pipeline: construction, search, '
-        'validation">',
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 180" '
+        f'role="img" font-family="{_DIAGRAM_FONT}" '
+        f'aria-label="Alpha discovery pipeline: construction, search, validation">',
         "<title>Alpha discovery pipeline</title>",
     ]
 
