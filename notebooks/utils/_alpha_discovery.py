@@ -6,7 +6,7 @@ and skimmable: each step calls one helper and explains *what* it does, while the
 *how* lives here for anyone who wants to read it.
 
 The research logic is identical to the original walkthrough — it has only been
-parameterized through :class:`WalkthroughConfig` so every knob sits in one place.
+parameterized through :class:`WalkthroughConfig` so every parameter sits in one place.
 """
 
 from __future__ import annotations
@@ -23,80 +23,167 @@ from IPython.display import HTML
 
 from ._aperiodic_demo import run_position_backtest
 
-# Stages shown in the pipeline roadmap, in order. Each is (number, line 1, line 2).
-_PIPELINE_STEPS = [
-    ("1", "Load &amp;", "inspect"),
-    ("2", "Build the", "signal"),
-    ("3", "Search the", "grid"),
-    ("4", "Compare", "candidates"),
-    ("5", "Deep-dive", "the best"),
-    ("6", "Robustness", "check"),
+# The roadmap groups the six steps into three phases, each with its own color.
+# Each step is (number, line 1, line 2, icon key).
+_PIPELINE_PHASES = [
+    {"name": "CONSTRUCTION", "color": "#3b6ea5", "steps": (0, 1)},
+    {"name": "SEARCH", "color": "#715aa6", "steps": (2, 3)},
+    {"name": "VALIDATION", "color": "#2e8b6b", "steps": (4, 5)},
 ]
+_PIPELINE_STEPS = [
+    ("1", "Load &amp;", "inspect", "table"),
+    ("2", "Construct", "signal", "wave"),
+    ("3", "Search", "grid", "grid"),
+    ("4", "Compare", "candidates", "bars"),
+    ("5", "Examine", "best", "lens"),
+    ("6", "Robustness", "check", "shield"),
+]
+_DIAGRAM_TEXT = "#33302b"
+_DIAGRAM_ARROW = "#9b9488"
+
+
+def _phase_color(step_idx: int) -> str:
+    for phase in _PIPELINE_PHASES:
+        if step_idx in phase["steps"]:
+            return phase["color"]
+    return _PIPELINE_PHASES[0]["color"]
+
+
+def _step_icon(kind: str, cx: int, color: str) -> str:
+    """Return a small line-art glyph for a step, centered horizontally on ``cx``."""
+    stroke = f'fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round"'
+    if kind == "table":
+        icon = (
+            f'<rect x="{cx - 13}" y="82" width="26" height="20" rx="3" {stroke}/>'
+            f'<line x1="{cx - 13}" y1="89" x2="{cx + 13}" y2="89" stroke="{color}" stroke-width="2"/>'
+            f'<line x1="{cx}" y1="89" x2="{cx}" y2="102" stroke="{color}" stroke-width="1.5"/>'
+        )
+    elif kind == "wave":
+        icon = (
+            f'<polyline points="{cx - 13},97 {cx - 7},85 {cx - 1},93 {cx + 5},82 '
+            f'{cx + 13},90" {stroke} stroke-linecap="round"/>'
+        )
+    elif kind == "grid":
+        icon = (
+            f'<rect x="{cx - 12}" y="80" width="24" height="24" rx="2" {stroke}/>'
+            f'<line x1="{cx - 4}" y1="80" x2="{cx - 4}" y2="104" stroke="{color}" stroke-width="1.4"/>'
+            f'<line x1="{cx + 4}" y1="80" x2="{cx + 4}" y2="104" stroke="{color}" stroke-width="1.4"/>'
+            f'<line x1="{cx - 12}" y1="88" x2="{cx + 12}" y2="88" stroke="{color}" stroke-width="1.4"/>'
+            f'<line x1="{cx - 12}" y1="96" x2="{cx + 12}" y2="96" stroke="{color}" stroke-width="1.4"/>'
+        )
+    elif kind == "bars":
+        icon = (
+            f'<rect x="{cx - 12}" y="94" width="6" height="10" rx="1" fill="{color}"/>'
+            f'<rect x="{cx - 3}" y="84" width="6" height="20" rx="1" fill="{color}"/>'
+            f'<rect x="{cx + 6}" y="90" width="6" height="14" rx="1" fill="{color}"/>'
+        )
+    elif kind == "lens":
+        icon = (
+            f'<circle cx="{cx - 3}" cy="89" r="8" {stroke}/>'
+            f'<line x1="{cx + 3}" y1="95" x2="{cx + 11}" y2="103" stroke="{color}" '
+            'stroke-width="2.2" stroke-linecap="round"/>'
+        )
+    else:  # shield
+        icon = (
+            f'<path d="M {cx} 80 L {cx + 11} 84 L {cx + 11} 92 C {cx + 11} 99 {cx + 6} 103 '
+            f'{cx} 105 C {cx - 6} 103 {cx - 11} 99 {cx - 11} 92 L {cx - 11} 84 Z" {stroke}/>'
+            f'<polyline points="{cx - 5},91 {cx - 1},96 {cx + 6},87" {stroke} '
+            'stroke-linecap="round"/>'
+        )
+    return icon
 
 
 def pipeline_diagram() -> HTML:
     """Return a responsive SVG roadmap of the six walkthrough steps.
 
-    Call it from a code cell so the image lands in an output area and inherits the
-    same dark-mode handling as the notebook's charts. Colors target the light
-    theme; the export template inverts output-area images for the dark theme.
+    The steps are grouped into three color-coded phases (construction, search,
+    validation), each node carrying a small glyph. Call it from a code cell so the
+    image lands in an output area and inherits the same dark-mode handling as the
+    notebook's charts; colors target the light theme and the export template
+    inverts output-area images for the dark theme.
 
     The SVG is delivered as a base64 ``<img>`` because nbconvert lower-cases inline
     SVG attribute names, which would corrupt the case-sensitive ``viewBox``.
     """
-    accent = "#3b82c4"
-    text_color = "#3a352e"
     node_w, gap = 132, 33
 
+    def node_x(idx: int) -> int:
+        return 2 + idx * (node_w + gap)
+
     parts = [
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 150" '
-        'role="img" aria-label="Alpha discovery pipeline">',
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 180" '
+        'role="img" aria-label="Alpha discovery pipeline: construction, search, '
+        'validation">',
         "<title>Alpha discovery pipeline</title>",
     ]
-    for i, (number, line1, line2) in enumerate(_PIPELINE_STEPS):
-        x = 2 + i * (node_w + gap)
-        cx = x + node_w // 2
+
+    # Phase headers: a color bar spanning each pair of nodes, with a caption above.
+    for phase in _PIPELINE_PHASES:
+        first, last = phase["steps"][0], phase["steps"][-1]
+        left = node_x(first)
+        right = node_x(last) + node_w
+        center = (left + right) // 2
         parts.append(
-            f'<rect x="{x}" y="40" width="{node_w}" height="84" rx="12" '
-            'fill="#f2eee7" stroke="#cfc6b6" stroke-width="1"/>'
+            f'<rect x="{left}" y="32" width="{right - left}" height="3" rx="1.5" '
+            f'fill="{phase["color"]}"/>'
         )
-        parts.append(f'<circle cx="{cx}" cy="66" r="15" fill="{accent}"/>')
         parts.append(
-            f'<text x="{cx}" y="71" text-anchor="middle" font-size="15" '
+            f'<text x="{center}" y="23" text-anchor="middle" font-size="12" '
+            f'font-weight="700" letter-spacing="1.5" fill="{phase["color"]}">'
+            f"{phase['name']}</text>"
+        )
+
+    # Connecting arrows between consecutive nodes.
+    for i in range(len(_PIPELINE_STEPS) - 1):
+        arrow_x = node_x(i) + node_w + 4
+        parts.append(
+            f'<line x1="{arrow_x}" y1="106" x2="{arrow_x + 17}" y2="106" '
+            f'stroke="{_DIAGRAM_ARROW}" stroke-width="2"/>'
+        )
+        parts.append(
+            f'<polygon points="{arrow_x + 17},101 {arrow_x + 17},111 '
+            f'{arrow_x + 27},106" fill="{_DIAGRAM_ARROW}"/>'
+        )
+
+    # Step cards.
+    for i, (number, line1, line2, icon_kind) in enumerate(_PIPELINE_STEPS):
+        x = node_x(i)
+        cx = x + node_w // 2
+        color = _phase_color(i)
+        parts.append(
+            f'<rect x="{x}" y="46" width="{node_w}" height="120" rx="12" '
+            f'fill="{color}" fill-opacity="0.06" stroke="{color}" '
+            'stroke-opacity="0.55" stroke-width="1.5"/>'
+        )
+        parts.append(_step_icon(icon_kind, cx, color))
+        parts.append(f'<circle cx="{x + 17}" cy="64" r="11" fill="{color}"/>')
+        parts.append(
+            f'<text x="{x + 17}" y="68" text-anchor="middle" font-size="13" '
             f'font-weight="700" fill="#ffffff">{number}</text>'
         )
         parts.append(
-            f'<text x="{cx}" y="100" text-anchor="middle" font-size="13" '
-            f'font-weight="600" fill="{text_color}">{line1}</text>'
+            f'<text x="{cx}" y="130" text-anchor="middle" font-size="12.5" '
+            f'font-weight="600" fill="{_DIAGRAM_TEXT}">{line1}</text>'
         )
         parts.append(
-            f'<text x="{cx}" y="116" text-anchor="middle" font-size="13" '
-            f'font-weight="600" fill="{text_color}">{line2}</text>'
+            f'<text x="{cx}" y="147" text-anchor="middle" font-size="12.5" '
+            f'font-weight="600" fill="{_DIAGRAM_TEXT}">{line2}</text>'
         )
-        if i < len(_PIPELINE_STEPS) - 1:
-            arrow_x = x + node_w + 4
-            parts.append(
-                f'<line x1="{arrow_x}" y1="82" x2="{arrow_x + 18}" y2="82" '
-                f'stroke="{accent}" stroke-width="2"/>'
-            )
-            parts.append(
-                f'<polygon points="{arrow_x + 18},77 {arrow_x + 18},87 '
-                f'{arrow_x + 28},82" fill="{accent}"/>'
-            )
+
     parts.append("</svg>")
 
     encoded = base64.b64encode("".join(parts).encode()).decode()
     return HTML(
         f'<img src="data:image/svg+xml;base64,{encoded}" '
         'alt="Alpha discovery pipeline roadmap" '
-        'style="width:100%;max-width:920px;height:auto;display:block;'
+        'style="width:100%;max-width:940px;height:auto;display:block;'
         'margin:0.75rem auto"/>'
     )
 
 
 @dataclass(frozen=True)
 class WalkthroughConfig:
-    """Every knob for the alpha-discovery walkthrough in one place.
+    """All parameters for the alpha-discovery walkthrough in one place.
 
     Attributes
     ----------
