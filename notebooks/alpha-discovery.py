@@ -469,46 +469,100 @@ def plot_strategy_overview(
     config: AlphaDiscoveryConfig,
     panel_df: pd.DataFrame,
     forward_returns: np.ndarray,
+    results_df: pd.DataFrame,
     row: pd.Series,
     title_prefix: str,
 ) -> tuple[np.ndarray, np.ndarray]:
     raw_signal, signal, bt_frame, _, mask = build_strategy_artifacts(
         config, panel_df, forward_returns, row
     )
+    deciles_df = build_decile_summary(signal, forward_returns)
+    feature_results = results_df.loc[
+        results_df["feature"] == row["feature"],
+        ["rank_window", "smooth_window", "sharpe"],
+    ].copy()
+    heatmap = feature_results.pivot(
+        index="rank_window", columns="smooth_window", values="sharpe"
+    ).sort_index()
+    heatmap = heatmap.reindex(index=config.rank_windows, columns=config.smooth_windows)
+    heatmap = heatmap.rename(columns={None: "None"})
+    heatmap_plot = heatmap.copy()
+    heatmap_plot.columns = [str(col) for col in heatmap_plot.columns]
+    masked_heatmap = np.ma.masked_invalid(heatmap_plot.to_numpy(dtype=float))
     smooth_label = (
         "None"
         if row["smooth_window"] is None or pd.isna(row["smooth_window"])
         else int(row["smooth_window"])
     )
 
-    fig, axes = plt.subplots(3, 1, figsize=(14, 8), sharex=True)
-    axes[0].plot(panel_df["time"], raw_signal, linewidth=0.8, color="tab:orange")
-    axes[0].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
-    axes[0].set_title(f"{title_prefix} raw rank signal | {row['feature']}")
-    axes[0].grid(alpha=0.2)
+    fig = plt.figure(figsize=(14, 12))
+    grid = fig.add_gridspec(4, 2, hspace=0.35, wspace=0.25)
+    ax_raw = fig.add_subplot(grid[0, :])
+    ax_signal = fig.add_subplot(grid[1, :], sharex=ax_raw)
+    ax_equity = fig.add_subplot(grid[2, :], sharex=ax_raw)
+    ax_deciles = fig.add_subplot(grid[3, 0])
+    ax_heatmap = fig.add_subplot(grid[3, 1])
 
-    axes[1].plot(panel_df["time"], signal, linewidth=0.9, color="tab:red")
-    axes[1].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
-    axes[1].set_title(
+    ax_raw.plot(panel_df["time"], raw_signal, linewidth=0.8, color="tab:orange")
+    ax_raw.axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
+    ax_raw.set_title(f"{title_prefix} raw rank signal | {row['feature']}")
+    ax_raw.grid(alpha=0.2)
+
+    ax_signal.plot(panel_df["time"], signal, linewidth=0.9, color="tab:red")
+    ax_signal.axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
+    ax_signal.set_title(
         f"{title_prefix} smoothed signal"
         f" | rank={int(row['rank_window'])}"
         f" | smooth={smooth_label}"
         f" | dir={int(row['direction'])}"
     )
-    axes[1].grid(alpha=0.2)
+    ax_signal.grid(alpha=0.2)
 
-    axes[2].plot(
+    ax_equity.plot(
         bt_frame["timestamp"],
         bt_frame["equity_curve"],
         linewidth=1.1,
         color="tab:green",
     )
-    axes[2].set_title(
+    ax_equity.set_title(
         f"{title_prefix} equity"
         f" | Sharpe={float(row['sharpe']):.3f}"
         f" | Ret={float(row['return_pct']):.3f}"
     )
-    axes[2].grid(alpha=0.2)
+    ax_equity.grid(alpha=0.2)
+
+    ax_deciles.bar(
+        deciles_df["decile"],
+        deciles_df["mean_fwd_ret"],
+        color="tab:blue",
+        alpha=0.85,
+    )
+    ax_deciles.axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
+    ax_deciles.set_title("Mean forward returns by decile")
+    ax_deciles.set_xlabel("Decile")
+    ax_deciles.set_ylabel("Mean next-bar return")
+    ax_deciles.grid(alpha=0.2, axis="y")
+
+    cmap = plt.get_cmap("RdYlGn").copy()
+    cmap.set_bad(color="#f3f4f6")
+    image = ax_heatmap.imshow(masked_heatmap, aspect="auto", cmap=cmap)
+    ax_heatmap.set_title("Robustness by window combination")
+    ax_heatmap.set_xlabel("Smooth window")
+    ax_heatmap.set_ylabel("Rank window")
+    ax_heatmap.set_xticks(
+        np.arange(len(heatmap_plot.columns)), labels=heatmap_plot.columns
+    )
+    ax_heatmap.set_yticks(np.arange(len(heatmap_plot.index)), labels=heatmap_plot.index)
+
+    for row_idx, row_values in enumerate(heatmap_plot.to_numpy(dtype=float)):
+        for col_idx, value in enumerate(row_values):
+            if not np.isfinite(value):
+                continue
+            ax_heatmap.text(
+                col_idx, row_idx, f"{value:.2f}", ha="center", va="center", fontsize=8
+            )
+
+    fig.colorbar(image, ax=ax_heatmap, label="Annualized Sharpe")
 
     fig.tight_layout()
     plt.show()
@@ -654,7 +708,8 @@ print(diverse_top_strategies.to_markdown(index=False))
 # behavior. To keep this comparison diverse, we plot the best candidate from each
 # metric family rather than multiple near-duplicates from the same source. For the
 # top five diversified candidates we show the raw ranked signal, the smoothed
-# signal, and the resulting equity curve.
+# signal, the equity curve, and two bottom diagnostics: mean forward returns by
+# decile and the feature's robustness across the tested window combinations.
 
 # %%
 diverse_plot_rows = (
@@ -669,22 +724,27 @@ diverse_plot_rows = (
 
 for _, row in diverse_plot_rows.iterrows():
     strategy_label = describe_strategy(row, feature_sources)
-    plot_strategy_overview(config, panel, forward_returns, row, strategy_label)
+    plot_strategy_overview(
+        config, panel, forward_returns, results_df, row, strategy_label
+    )
 
 # %% [markdown]
 # ---
 # ## Step 5 — Examine the best candidate
 #
-# We isolate the highest-ranked candidate and inspect its signal and equity curve,
-# followed by a decile analysis: the signal is partitioned into ten buckets and the
-# mean one-bar-ahead return is computed for each. A monotonic progression across
-# deciles is stronger evidence of a genuine relationship than a single outlier
-# bucket driving the result.
+# We isolate the highest-ranked candidate and inspect the full composite strategy
+# view. The bottom row adds two diagnostics directly into the same output:
+# mean forward returns by decile and a robustness heatmap across window choices.
 
 # %%
 best = results_df.iloc[0]
 best_signal, best_mask = plot_strategy_overview(
-    config, panel, forward_returns, best, describe_strategy(best, feature_sources)
+    config,
+    panel,
+    forward_returns,
+    results_df,
+    best,
+    describe_strategy(best, feature_sources),
 )
 
 best_summary = pd.DataFrame(
@@ -707,70 +767,6 @@ best_summary = pd.DataFrame(
     ]
 )
 print(best_summary.to_markdown(index=False))
-
-# %%
-deciles_df = build_decile_summary(best_signal, forward_returns)
-
-fig, ax = plt.subplots(figsize=(10, 4))
-ax.bar(deciles_df["decile"], deciles_df["mean_fwd_ret"], color="tab:blue", alpha=0.85)
-ax.axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
-ax.set_title("Best strategy: mean next-bar return by signal decile")
-ax.set_xlabel("Decile")
-ax.set_ylabel("Mean next-bar return")
-ax.grid(alpha=0.2, axis="y")
-fig.tight_layout()
-plt.show()
-
-print(deciles_df.to_markdown(index=False))
-
-# %% [markdown]
-# ---
-# ## Step 6 — Robustness check
-#
-# Is the measured edge genuine, or an artifact of a single parameter combination?
-# The heatmap shows the top feature's Sharpe across the tested `rank_window ×
-# smooth_window` combinations. Blank cells were intentionally not evaluated because
-# the smoother was too long relative to the ranking horizon. An isolated
-# high-Sharpe cell among weak neighbors indicates overfitting; a contiguous
-# high-Sharpe region indicates the edge degrades gracefully under parameter
-# perturbation, which is characteristic of a robust signal.
-#
-# > **Scope.** This assesses robustness to parameter selection in-sample. It is a
-# > diagnostic, not a substitute for out-of-sample validation — see *Next steps*.
-
-# %%
-best_feature_results = results_df.loc[
-    results_df["feature"] == best["feature"],
-    ["rank_window", "smooth_window", "sharpe"],
-].copy()
-heatmap = best_feature_results.pivot(
-    index="rank_window", columns="smooth_window", values="sharpe"
-).sort_index()
-heatmap = heatmap.reindex(index=config.rank_windows, columns=config.smooth_windows)
-heatmap = heatmap.rename(columns={None: "None"})
-heatmap_plot = heatmap.copy()
-heatmap_plot.columns = [str(col) for col in heatmap_plot.columns]
-masked_heatmap = np.ma.masked_invalid(heatmap_plot.to_numpy(dtype=float))
-
-fig, ax = plt.subplots(figsize=(8, 4))
-cmap = plt.get_cmap("RdYlGn").copy()
-cmap.set_bad(color="#f3f4f6")
-image = ax.imshow(masked_heatmap, aspect="auto", cmap=cmap)
-ax.set_title(f"Sharpe by window combination for {best['feature']}")
-ax.set_xlabel("Smooth window")
-ax.set_ylabel("Rank window")
-ax.set_xticks(np.arange(len(heatmap_plot.columns)), labels=heatmap_plot.columns)
-ax.set_yticks(np.arange(len(heatmap_plot.index)), labels=heatmap_plot.index)
-
-for row_idx, row_values in enumerate(heatmap_plot.to_numpy(dtype=float)):
-    for col_idx, value in enumerate(row_values):
-        if not np.isfinite(value):
-            continue
-        ax.text(col_idx, row_idx, f"{value:.2f}", ha="center", va="center", fontsize=9)
-
-fig.colorbar(image, ax=ax, label="Annualized Sharpe")
-fig.tight_layout()
-plt.show()
 
 # %%
 top_feature_summary = (
