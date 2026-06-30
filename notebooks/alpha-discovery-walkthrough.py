@@ -19,72 +19,61 @@
 # aperiodic: uses_preview_data
 
 # %% [markdown]
-# # Alpha Discovery Walkthrough
+# # Alpha Discovery Walkthrough — a mini course
 #
-# This notebook is a guided version of the alpha-discovery workflow.
-# It keeps the same research logic as the main notebook, but breaks the work into
-# smaller steps so it is easier to follow.
+# Welcome. This is a **guided, step-by-step** version of the alpha-discovery
+# workflow — the same research logic as the main notebook, broken into bite-sized
+# lessons you can read top to bottom (or jump around using the roadmap below).
 #
-# The pipeline is:
-# 1. load BTC perpetual price and feature data
-# 2. forward fill sparse feature columns
-# 3. convert each feature into a rolling percentile-rank signal
-# 4. optionally smooth that signal
-# 5. backtest every feature/window combination
-# 6. compare the strongest strategies and inspect the best one in detail
-
-# %% [markdown]
-# ## Configuration
+# **What you'll learn**
 #
-# `RANK_WINDOWS` control how much history is used when turning a feature into a
-# percentile-rank signal.
+# - how raw microstructure metrics become tradeable, scale-free **signals**
+# - how to search a feature × parameter **grid** and score every candidate
+# - how to tell a genuinely **robust** edge from a lucky parameter pair
+# - how to **grab the winning configuration** and reuse it in your own code
 #
-# `SMOOTH_WINDOWS` are applied after the rank signal is built. `None` means
-# "use the raw ranked signal without smoothing."
+# *Reading time ≈ 10 min · runs end to end on preview data.*
 #
-# `COST_BPS` is the one-way transaction cost used in the simple position backtest.
+# ### The pipeline
+#
+# Six steps take you from raw market data to a validated, reusable signal. Run the
+# cell below for the roadmap — every step that follows maps to one box.
 
 # %%
+from utils._alpha_discovery import pipeline_diagram
 
-from __future__ import annotations
+pipeline_diagram()
 
+# %% [markdown]
+# **How to take this course.** Run the two **Setup** cells (Configuration, then
+# Toolbox), then work through Steps 1–6 in order. Each step is a short "what & why"
+# note followed by a single code cell. The final section hands you a copy-paste
+# snippet so you can take the result with you.
+
+# %% [markdown]
+# ---
+# ## Setup — Configuration
+#
+# Everything you might want to tweak lives in one place: the instrument and date
+# range, which metric families to pull, and the two search dimensions. Edit this
+# cell, re-run the notebook, and every step downstream picks up your changes.
+#
+# - **`rank_windows`** — how much history to use when turning a feature into a
+#   percentile-rank signal (longer = slower, steadier).
+# - **`smooth_windows`** — moving-average lengths applied *after* ranking.
+#   `None` means "use the raw ranked signal." This is the second search dimension.
+# - **`cost_bps`** — one-way transaction cost charged by the backtest.
+
+# %%
 import datetime
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from aperiodic import get_derivative_metrics, get_metrics, get_ohlcv
-from utils._aperiodic_demo import run_position_backtest
+from IPython.display import Markdown, display
 
-SYMBOL = "perpetual-BTC-USDT:USDT"
-EXCHANGE = "binance-futures"
-INTERVAL = "5m"
-TIMESTAMP = "exchange"  # local timestamp or "true"
-
-START_DATE = datetime.date(2025, 5, 1)
-END_DATE = datetime.date(2025, 5, 31)
-
-METRICS = [
-    ("basis", "derivative"),
-    ("funding", "derivative"),
-    ("open_interest", "derivative"),
-    ("flow", "regular"),
-    ("impact", "regular"),
-    ("returns", "regular"),
-    ("slippage", "regular"),
-    ("trade_size", "regular"),
-    ("updownticks", "regular"),
-    ("run_structure", "regular"),
-    ("vtwap", "regular"),
-    ("range", "regular"),
-]
-
-RANK_WINDOWS = [100, 300, 600, 1200, 2400]
-SMOOTH_WINDOWS = [None, 10, 50, 100, 200, 400]
-COST_BPS = 1.0
-TOP_STRATEGY_COUNT = 10
-TOP_PLOT_COUNT = 3
+from utils._alpha_discovery import WalkthroughConfig
 
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
@@ -92,285 +81,70 @@ if API_KEY == "...":
 if API_KEY == "...":
     raise RuntimeError("Set APERIODIC_API_KEY in the environment or in .env.")
 
+config = WalkthroughConfig(
+    api_key=API_KEY,
+    symbol="perpetual-BTC-USDT:USDT",
+    exchange="binance-futures",
+    interval="5m",
+    timestamp="exchange",  # local timestamp or "true"
+    start_date=datetime.date(2025, 5, 1),
+    end_date=datetime.date(2025, 5, 31),
+    metrics=[
+        ("basis", "derivative"),
+        ("funding", "derivative"),
+        ("open_interest", "derivative"),
+        ("flow", "regular"),
+        ("impact", "regular"),
+        ("returns", "regular"),
+        ("slippage", "regular"),
+        ("trade_size", "regular"),
+        ("updownticks", "regular"),
+        ("run_structure", "regular"),
+        ("vtwap", "regular"),
+        ("range", "regular"),
+    ],
+    rank_windows=[100, 300, 600, 1200, 2400],
+    smooth_windows=[None, 10, 50, 100, 200, 400],
+    cost_bps=1.0,
+)
 
-def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:
-    fetcher = get_derivative_metrics if kind == "derivative" else get_metrics
-    raw_df = fetcher(
-        api_key=API_KEY,
-        metric=metric,
-        timestamp=TIMESTAMP,
-        interval=INTERVAL,
-        exchange=EXCHANGE,
-        symbol=SYMBOL,
-        start_date=START_DATE,
-        end_date=END_DATE,
-        output="pandas",
-        show_progress=True,
-        preview=True,
-    )
-
-    df = raw_df.to_pandas() if hasattr(raw_df, "to_pandas") else pd.DataFrame(raw_df)
-    if df.empty or "time" not in df.columns:
-        print(f"Skipping {metric}: no rows returned.")
-        return None
-
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    if "time" in numeric_cols:
-        numeric_cols.remove("time")
-
-    if not numeric_cols:
-        print(f"Skipping {metric}: no numeric columns returned.")
-        return None
-
-    return df.sort_values("time").drop_duplicates(subset=["time"], keep="last")[
-        ["time", *numeric_cols]
-    ]
-
-
-def build_panel() -> tuple[pd.DataFrame, list[str]]:
-    raw_ohlcv = get_ohlcv(
-        api_key=API_KEY,
-        timestamp=TIMESTAMP,
-        interval=INTERVAL,
-        exchange=EXCHANGE,
-        symbol=SYMBOL,
-        start_date=START_DATE,
-        end_date=END_DATE,
-        output="pandas",
-        show_progress=True,
-        preview=True,
-    )
-
-    panel = (
-        raw_ohlcv.to_pandas() if hasattr(raw_ohlcv, "to_pandas") else pd.DataFrame(raw_ohlcv)
-    )
-    panel = panel.sort_values("time")[["time", "close"]]
-
-    for metric, kind in METRICS:
-        frame = get_numeric_metric_frame(metric, kind)
-        if frame is None:
-            continue
-
-        feature_values = [col for col in frame.columns if col != "time"]
-        if frame[feature_values].notna().sum().sum() == 0:
-            print(f"Skipping {metric}: all feature values are null.")
-            continue
-
-        panel = panel.merge(frame, on="time", how="left")
-
-    panel = panel.sort_values("time")
-    feature_cols = [
-        col
-        for col in panel.columns
-        if col not in {"time", "close"}
-        and pd.api.types.is_numeric_dtype(panel[col])
-    ]
-
-    panel[feature_cols] = panel[feature_cols].ffill()
-    panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
-    panel = panel.dropna(subset=["fwd_ret"])
-    return panel, feature_cols
-
-
-def summarize_panel(panel_df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
-    coverage_rows = []
-    for feature in feature_cols[:10]:
-        coverage_rows.append(
-            {
-                "feature": feature,
-                "non_null_pct": float(panel_df[feature].notna().mean() * 100.0),
-                "std": float(panel_df[feature].std()),
-            }
-        )
-    return pd.DataFrame(coverage_rows)
-
-
-def make_rank_signal(panel_df: pd.DataFrame, feature: str, window: int) -> np.ndarray:
-    rank = panel_df[feature].rolling(window).rank(method="average")
-    signal = ((rank - 1.0) / (window - 1)) * 2.0 - 1.0
-    return signal.to_numpy().astype(np.float64)
-
-
-def smooth_signal(signal: np.ndarray, window: int | None) -> np.ndarray:
-    if window is None or pd.isna(window) or int(window) == 1:
-        return signal.astype(np.float64, copy=True)
-
-    return pd.Series(signal).rolling(int(window)).mean().to_numpy().astype(np.float64)
-
-
-def evaluate_strategies(
-    panel_df: pd.DataFrame, feature_cols: list[str]
-) -> tuple[pd.DataFrame, np.ndarray]:
-    forward_returns = panel_df["fwd_ret"].to_numpy().astype(np.float64)
-    results: list[dict[str, float | int | str | None]] = []
-
-    for feature in feature_cols:
-        for rank_window in RANK_WINDOWS:
-            raw_signal = make_rank_signal(panel_df, feature, rank_window)
-
-            for smooth_window in SMOOTH_WINDOWS:
-                signal = smooth_signal(raw_signal, smooth_window)
-                mask = np.isfinite(signal) & np.isfinite(forward_returns)
-
-                signal_valid = signal[mask]
-                returns_valid = forward_returns[mask]
-                if (
-                    signal_valid.size < 2
-                    or np.std(signal_valid) == 0.0
-                    or np.std(returns_valid) == 0.0
-                ):
-                    continue
-
-                fit_corr = float(np.corrcoef(signal_valid, returns_valid)[0, 1])
-                if not np.isfinite(fit_corr):
-                    continue
-
-                direction = 1 if fit_corr >= 0 else -1
-                _, bt_summary = run_position_backtest(
-                    timestamps=panel_df.loc[mask, "time"],
-                    position=np.nan_to_num(
-                        np.clip(signal_valid * direction, -1.0, 1.0), nan=0.0
-                    ),
-                    forward_return=returns_valid,
-                    cost_bps_one_way=COST_BPS,
-                )
-
-                results.append(
-                    {
-                        "feature": feature,
-                        "rank_window": rank_window,
-                        "smooth_window": smooth_window,
-                        "direction": direction,
-                        "fit_corr": fit_corr,
-                        "sharpe": bt_summary["annualized_sharpe"],
-                        "return_pct": bt_summary["net_return_pct"],
-                        "drawdown_pct": bt_summary["max_drawdown_pct"],
-                    }
-                )
-
-    if not results:
-        raise RuntimeError(
-            "No valid feature/window combinations were produced. "
-            "Check the fetched metric coverage for the selected date range."
-        )
-
-    results_df = pd.DataFrame(results).sort_values("sharpe", ascending=False)
-    return results_df, forward_returns
-
-
-def summarize_top_strategies(results_df: pd.DataFrame, top_n: int) -> pd.DataFrame:
-    summary = results_df.head(top_n).copy()
-    summary["smooth_window"] = summary["smooth_window"].map(
-        lambda value: "None" if value is None or pd.isna(value) else int(value)
-    )
-    summary["direction"] = summary["direction"].map({1: "long", -1: "short"})
-    return summary[
-        [
-            "feature",
-            "rank_window",
-            "smooth_window",
-            "direction",
-            "fit_corr",
-            "sharpe",
-            "return_pct",
-            "drawdown_pct",
-        ]
-    ]
-
-
-def build_strategy_artifacts(
-    panel_df: pd.DataFrame, forward_returns: np.ndarray, row: pd.Series
-) -> tuple[np.ndarray, np.ndarray, pd.DataFrame, dict[str, float], np.ndarray]:
-    raw_signal = make_rank_signal(panel_df, str(row["feature"]), int(row["rank_window"]))
-    signal = smooth_signal(raw_signal, row["smooth_window"]) * int(row["direction"])
-    mask = np.isfinite(signal) & np.isfinite(forward_returns)
-    bt_frame, bt_summary = run_position_backtest(
-        timestamps=panel_df.loc[mask, "time"],
-        position=np.nan_to_num(np.clip(signal[mask], -1.0, 1.0), nan=0.0),
-        forward_return=forward_returns[mask],
-        cost_bps_one_way=COST_BPS,
-    )
-    return raw_signal, signal, bt_frame, bt_summary, mask
-
-
-def plot_strategy_overview(
-    panel_df: pd.DataFrame,
-    forward_returns: np.ndarray,
-    row: pd.Series,
-    title_prefix: str,
-) -> tuple[np.ndarray, np.ndarray]:
-    raw_signal, signal, bt_frame, _, mask = build_strategy_artifacts(
-        panel_df, forward_returns, row
-    )
-    smooth_label = (
-        "None"
-        if row["smooth_window"] is None or pd.isna(row["smooth_window"])
-        else int(row["smooth_window"])
-    )
-
-    fig, axes = plt.subplots(3, 1, figsize=(14, 8), sharex=True)
-    axes[0].plot(panel_df["time"], raw_signal, linewidth=0.8, color="tab:orange")
-    axes[0].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
-    axes[0].set_title(f"{title_prefix} raw rank signal | {row['feature']}")
-    axes[0].grid(alpha=0.2)
-
-    axes[1].plot(panel_df["time"], signal, linewidth=0.9, color="tab:red")
-    axes[1].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
-    axes[1].set_title(
-        f"{title_prefix} smoothed signal"
-        f" | rank={int(row['rank_window'])}"
-        f" | smooth={smooth_label}"
-        f" | dir={int(row['direction'])}"
-    )
-    axes[1].grid(alpha=0.2)
-
-    axes[2].plot(bt_frame["timestamp"], bt_frame["equity_curve"], linewidth=1.1, color="tab:green")
-    axes[2].set_title(
-        f"{title_prefix} equity"
-        f" | Sharpe={float(row['sharpe']):.3f}"
-        f" | Ret={float(row['return_pct']):.3f}"
-    )
-    axes[2].grid(alpha=0.2)
-
-    fig.tight_layout()
-    plt.show()
-    return signal, mask
-
-
-def build_decile_summary(signal: np.ndarray, forward_returns: np.ndarray) -> pd.DataFrame:
-    mask = np.isfinite(signal) & np.isfinite(forward_returns)
-    signal_valid = signal[mask]
-    returns_valid = forward_returns[mask]
-
-    if signal_valid.size == 0:
-        raise RuntimeError("Best strategy produced no valid observations for decile analysis.")
-
-    order = np.argsort(signal_valid)
-    deciles = np.empty(signal_valid.shape[0], dtype=np.int64)
-    deciles[order] = (np.arange(signal_valid.shape[0]) * 10 // signal_valid.shape[0]) + 1
-
-    return pd.DataFrame(
-        [
-            {
-                "decile": decile,
-                "count": int((decile_mask := deciles == decile).sum()),
-                "mean_signal": float(np.nanmean(signal_valid[decile_mask])),
-                "mean_fwd_ret": float(np.nanmean(returns_valid[decile_mask])),
-            }
-            for decile in range(1, 11)
-        ]
-    )
-
+# Display knobs for the tables and plots below.
+TOP_STRATEGY_COUNT = 10
+TOP_PLOT_COUNT = 3
 
 # %% [markdown]
-# ## Load And Inspect Data
+# ---
+# ## Setup — Toolbox
 #
-# The panel combines close price with all numeric feature columns returned by the
-# selected metric set. Feature columns are forward filled before the one-bar-ahead
-# return target is created.
+# The data-loading, signal-building, search, and plotting helpers live in
+# [`utils/_alpha_discovery.py`](utils/_alpha_discovery.py) so this notebook can
+# stay focused on the *ideas*. We import them here in one line; each step below
+# explains what the helper it uses does, and you can open the module any time to
+# see exactly how it works.
 
 # %%
-panel, feature_cols = build_panel()
+from utils._alpha_discovery import (
+    build_decile_summary,
+    build_panel,
+    evaluate_strategies,
+    plot_strategy_overview,
+    summarize_panel,
+    summarize_top_strategies,
+)
+
+# %% [markdown]
+# ---
+# ## Step 1 — Load & inspect the data
+#
+# `build_panel` pulls close price plus every numeric column from the configured
+# metric families, **forward-fills** the sparse ones, and builds the prediction
+# target: the **next bar's return** (`fwd_ret`).
+#
+# Before trusting any result built on top of it, sanity-check the data — its
+# shape, a few example rows, and how well each feature is populated.
+
+# %%
+panel, feature_cols, feature_sources = build_panel(config)
 panel_summary = summarize_panel(panel, feature_cols)
 
 print(f"Rows: {len(panel):,}")
@@ -381,64 +155,85 @@ print(panel[["time", "close", "fwd_ret"]].head().to_markdown(index=False))
 print("\nFeature coverage snapshot:")
 print(panel_summary.to_markdown(index=False))
 
-
 # %% [markdown]
-# ## Signal Construction
+# ---
+# ## Step 2 — Build the signal
 #
-# A raw feature is first turned into a rolling percentile-rank signal in `[-1, 1]`.
-# Smoothing is then applied to that ranked signal, not to the raw feature itself.
+# A raw feature isn't tradeable on its own — its scale drifts and its units are
+# arbitrary. Two transforms fix that:
 #
-# The strategy direction is chosen from the sign of the in-sample correlation between
-# the signal and the next-bar return.
+# 1. **Rank.** Inside a rolling window of `rank_window` bars, replace each value
+#    with its percentile rank, then rescale to `[-1, +1]`. High means "unusually
+#    high versus recent history," low means "unusually low" — scale-free and
+#    comparable across features.
+# 2. **Smooth** *(optional)*. Average the ranked signal over `smooth_window` bars
+#    to trade responsiveness for stability. `None` keeps the raw ranked signal.
+#
+# The strategy **direction** (long or short) is taken from the sign of the
+# in-sample correlation between the signal and the next-bar return.
+#
+# Because every feature is tried against every `(rank_window, smooth_window)`
+# pair, the search space is `features × rank_windows × smooth_windows`:
 
 # %%
 search_space = pd.DataFrame(
     [
         {
             "features": len(feature_cols),
-            "rank_windows": len(RANK_WINDOWS),
-            "smooth_windows": len(SMOOTH_WINDOWS),
-            "total_combinations": len(feature_cols) * len(RANK_WINDOWS) * len(SMOOTH_WINDOWS),
+            "rank_windows": len(config.rank_windows),
+            "smooth_windows": len(config.smooth_windows),
+            "total_combinations": (
+                len(feature_cols) * len(config.rank_windows) * len(config.smooth_windows)
+            ),
         }
     ]
 )
 print(search_space.to_markdown(index=False))
 
-
 # %% [markdown]
-# ## Run The Parameter Search
+# ---
+# ## Step 3 — Search the grid
 #
-# Every feature is tested across all rank-window and smoothing-window combinations.
-# Each valid combination is backtested with the same transaction-cost assumption.
+# `evaluate_strategies` walks the whole grid: for each combination it builds the
+# signal, picks a direction, and runs the same cost-aware position backtest. Every
+# valid candidate gets a Sharpe, a net return, and a max drawdown. We sort by
+# Sharpe and look at the strongest few.
 
 # %%
-results_df, forward_returns = evaluate_strategies(panel, feature_cols)
+results_df, forward_returns = evaluate_strategies(config, panel, feature_cols)
 top_strategies = summarize_top_strategies(results_df, TOP_STRATEGY_COUNT)
 
 print("Top strategies by Sharpe:")
 print(top_strategies.to_markdown(index=False))
 
-
 # %% [markdown]
-# ## Compare The Strongest Candidates
+# ---
+# ## Step 4 — Compare the strongest candidates
 #
-# Start with a compact table, then plot a few of the strongest strategies to get an
-# intuition for how different winning candidates behave.
+# A table tells you *which* candidates won; the plots tell you *how* they behave.
+# For the top few we show the raw ranked signal, the smoothed signal, and the
+# resulting equity curve, so you can build intuition for what a "good" candidate
+# actually looks like.
 
 # %%
 for plot_idx, (_, row) in enumerate(results_df.head(TOP_PLOT_COUNT).iterrows(), start=1):
-    plot_strategy_overview(panel, forward_returns, row, f"Candidate {plot_idx}")
-
+    plot_strategy_overview(config, panel, forward_returns, row, f"Candidate {plot_idx}")
 
 # %% [markdown]
-# ## Best Strategy Deep Dive
+# ---
+# ## Step 5 — Deep-dive the best strategy
 #
-# Now focus on the single best strategy and inspect its signal shape, equity curve,
-# decile monotonicity, and sensitivity to the two search dimensions.
+# Now zoom in on the single best candidate: its signal shape and equity curve,
+# then a **decile test**. Bucket the signal into ten groups and check that the
+# mean next-bar return climbs (or falls) steadily across buckets. A clean,
+# monotonic staircase is far more convincing than one extreme bucket doing all
+# the work.
 
 # %%
 best = results_df.iloc[0]
-best_signal, best_mask = plot_strategy_overview(panel, forward_returns, best, "Best strategy")
+best_signal, best_mask = plot_strategy_overview(
+    config, panel, forward_returns, best, "Best strategy"
+)
 
 best_summary = pd.DataFrame(
     [
@@ -461,7 +256,6 @@ best_summary = pd.DataFrame(
 )
 print(best_summary.to_markdown(index=False))
 
-
 # %%
 deciles_df = build_decile_summary(best_signal, forward_returns)
 
@@ -477,12 +271,21 @@ plt.show()
 
 print(deciles_df.to_markdown(index=False))
 
-
 # %% [markdown]
-# ## Feature And Window Diagnostics
+# ---
+# ## Step 6 — Robustness check
 #
-# The heatmap below shows whether the best feature is only strong for one exact
-# parameter pair or whether its edge is more stable across the search grid.
+# *Is the edge real, or did we just get lucky with one parameter pair?*
+#
+# The heatmap shows the best feature's Sharpe across the whole `rank_window` ×
+# `smooth_window` grid. A single hot cell surrounded by cold ones screams
+# **overfit** — the result hinges on one exact setting. A broad warm region means
+# the edge **degrades gracefully** as you change the knobs, which is what a
+# trustworthy signal looks like.
+#
+# > **Scope:** this tests robustness to *parameter choice* on in-sample data. It
+# > is a sanity check, not a substitute for true out-of-sample testing — see
+# > *Next steps* below.
 
 # %%
 best_feature_results = results_df.loc[
@@ -510,7 +313,6 @@ fig.colorbar(image, ax=ax, label="Annualized Sharpe")
 fig.tight_layout()
 plt.show()
 
-
 # %%
 top_feature_summary = (
     results_df.groupby("feature", as_index=False)["sharpe"]
@@ -521,13 +323,75 @@ top_feature_summary = (
 print("Top features by best Sharpe:")
 print(top_feature_summary.to_markdown(index=False))
 
+# %% [markdown]
+# ---
+# ## Recap
+#
+# You ran the whole loop end to end:
+#
+# - **Loaded** price and microstructure features and built a next-bar return target.
+# - **Turned** raw features into scale-free ranked signals, optionally smoothed.
+# - **Searched** the full feature × window grid and scored every candidate.
+# - **Inspected** the winners — equity curve, decile monotonicity, and parameter
+#   robustness.
+#
+# The key idea: smoothing is a *second search dimension*, so a feature can win
+# either because its raw ranked signal works or because a slower version of it is
+# cleaner.
 
 # %% [markdown]
-# ## Takeaways
+# ---
+# ## Next steps — grab these metrics with this snippet
 #
-# - The notebook searches for features whose ranked microstructure behavior predicts
-#   the next 5-minute return.
-# - Smoothing is a second dimension in the search, so a good feature can win either
-#   because the raw ranked signal works or because a slower version of it is cleaner.
-# - The most useful follow-up is usually out-of-sample validation on a longer range
-#   or on a different exchange.
+# The most valuable follow-up is **out-of-sample validation**: rerun the winning
+# configuration on a later date range, a different symbol, or another exchange. If
+# the edge survives, it is worth a closer look.
+#
+# Run the cell below to print a **copy-paste-ready snippet**, pre-filled with this
+# run's winning feature and parameters, that re-fetches the source metric and
+# rebuilds the exact signal on a fresh window.
+
+# %%
+best_feature = str(best["feature"])
+new_metric, new_kind = feature_sources.get(best_feature, (best_feature, "regular"))
+new_rank = int(best["rank_window"])
+new_smooth = (
+    None
+    if best["smooth_window"] is None or pd.isna(best["smooth_window"])
+    else int(best["smooth_window"])
+)
+
+snippet = f'''import datetime
+
+from utils._alpha_discovery import WalkthroughConfig, build_panel, evaluate_strategies
+
+# This run's winner: {best_feature!r} (from the {new_metric!r} metric family).
+# Re-fetch it on a fresh, OUT-OF-SAMPLE window and rebuild the exact signal.
+config = WalkthroughConfig(
+    api_key="YOUR_KEY",
+    symbol="{config.symbol}",
+    exchange="{config.exchange}",
+    interval="{config.interval}",
+    timestamp="{config.timestamp}",
+    start_date=datetime.date(2025, 6, 1),
+    end_date=datetime.date(2025, 6, 30),
+    metrics=[("{new_metric}", "{new_kind}")],
+    rank_windows=[{new_rank}],
+    smooth_windows=[{new_smooth}],
+    cost_bps={config.cost_bps},
+)
+
+panel, feature_cols, _ = build_panel(config)
+results, _ = evaluate_strategies(config, panel, feature_cols)
+
+winner = results[results["feature"] == "{best_feature}"].iloc[0]
+print(winner[["feature", "rank_window", "smooth_window", "sharpe", "return_pct", "drawdown_pct"]])
+'''
+
+display(Markdown("#### Grab these metrics with this snippet\n\n```python\n" + snippet + "\n```"))
+
+print(
+    "This run's winner ·",
+    f"feature={best_feature} · metric={new_metric} · rank={new_rank} · "
+    f"smooth={new_smooth} · sharpe={float(best['sharpe']):.3f}",
+)
