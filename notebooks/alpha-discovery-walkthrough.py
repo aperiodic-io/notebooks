@@ -38,8 +38,8 @@
 # ### The pipeline
 #
 # The workflow spans three phases — **construction**, **search**, and
-# **validation** — across six steps. Run the cell below for the roadmap; each step
-# that follows corresponds to one stage.
+# **validation** — across six steps. Run the cell below for the color-coded
+# roadmap; each step that follows maps to one node.
 
 # %%
 from utils._alpha_discovery import pipeline_diagram
