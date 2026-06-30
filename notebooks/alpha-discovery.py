@@ -81,7 +81,9 @@ def pipeline_diagram() -> None:
             fontweight="bold",
             color=color,
         )
-        ax.text(x + 1.62, 1.48, " • ".join(steps), ha="center", va="center", fontsize=10)
+        ax.text(
+            x + 1.62, 1.48, " • ".join(steps), ha="center", va="center", fontsize=10
+        )
         x += 3.45
 
     for arrow_x in [4.0, 7.45]:
@@ -92,13 +94,9 @@ def pipeline_diagram() -> None:
             arrowprops=dict(arrowstyle="->", lw=1.8, color="0.35"),
         )
 
+
 pipeline_diagram()
 
-# %% [markdown]
-# **Using this notebook.** Run the two setup cells (configuration, then the helper
-# import), then proceed through Steps 1–6 in order. Each step pairs a brief rationale
-# with a single code cell. The closing section provides a standalone snippet for
-# reproducing the selected configuration.
 
 # %% [markdown]
 # ---
@@ -145,7 +143,9 @@ class AlphaDiscoveryConfig:
     metrics: list[tuple[str, str]]
     rank_windows: list[int]
     smooth_windows: list[int | None]
+    max_smoothing_rank_ratio: float
     cost_bps: float
+
 
 config = AlphaDiscoveryConfig(
     api_key=API_KEY,
@@ -161,6 +161,7 @@ config = AlphaDiscoveryConfig(
         ("open_interest", "derivative"),
         ("flow", "regular"),
         ("impact", "regular"),
+        ("l1_price", "regular"),
         ("l1_imbalance", "regular"),
         ("l1_liquidity", "regular"),
         ("returns", "regular"),
@@ -171,8 +172,9 @@ config = AlphaDiscoveryConfig(
         ("vtwap", "regular"),
         ("range", "regular"),
     ],
-    rank_windows=[100, 300, 600, 1200, 2400],
-    smooth_windows=[None, 10, 50, 100, 200, 400],
+    rank_windows=[300, 600, 1200, 2400, 3600, 4800],
+    smooth_windows=[None, 50, 100, 200, 400],
+    max_smoothing_rank_ratio=1 / 3,
     cost_bps=1.0,
 )
 
@@ -207,7 +209,9 @@ def run_position_backtest(
     equity = np.cumprod(1.0 + net_pnl)
 
     if equity.size == 0:
-        bt_frame = pd.DataFrame({"timestamp": timestamps.to_numpy(), "equity_curve": equity})
+        bt_frame = pd.DataFrame(
+            {"timestamp": timestamps.to_numpy(), "equity_curve": equity}
+        )
         bt_summary = {
             "annualized_sharpe": 0.0,
             "net_return_pct": 0.0,
@@ -222,12 +226,16 @@ def run_position_backtest(
     bars_per_year = 288 * 365
     mean_ret = float(np.mean(net_pnl))
     std_ret = float(np.std(net_pnl, ddof=1)) if len(net_pnl) > 1 else 1.0
-    annualized_sharpe = (mean_ret / std_ret) * np.sqrt(bars_per_year) if std_ret > 0 else 0.0
+    annualized_sharpe = (
+        (mean_ret / std_ret) * np.sqrt(bars_per_year) if std_ret > 0 else 0.0
+    )
     net_return_pct = (
         float((equity[-1] / equity[0] - 1.0) * 100.0) if len(equity) > 0 else 0.0
     )
 
-    bt_frame = pd.DataFrame({"timestamp": timestamps.to_numpy(), "equity_curve": equity})
+    bt_frame = pd.DataFrame(
+        {"timestamp": timestamps.to_numpy(), "equity_curve": equity}
+    )
     bt_summary = {
         "annualized_sharpe": float(annualized_sharpe),
         "net_return_pct": net_return_pct,
@@ -325,7 +333,9 @@ def build_panel(
     panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
     panel = panel.dropna(subset=["fwd_ret"])
 
-    feature_sources = {col: feature_sources[col] for col in feature_cols if col in feature_sources}
+    feature_sources = {
+        col: feature_sources[col] for col in feature_cols if col in feature_sources
+    }
     return panel, feature_cols, feature_sources
 
 
@@ -343,8 +353,10 @@ def summarize_panel(panel_df: pd.DataFrame, feature_cols: list[str]) -> pd.DataF
 
 
 def make_rank_signal(panel_df: pd.DataFrame, feature: str, window: int) -> np.ndarray:
-    rank = panel_df[feature].rolling(window).rank(method="average")
-    signal = ((rank - 1.0) / (window - 1)) * 2.0 - 1.0
+    values = panel_df[feature]
+    rolling_rank = values.rolling(window, min_periods=10).rank(method="average")
+    effective_window = values.rolling(window, min_periods=10).count()
+    signal = ((rolling_rank - 1.0) / (effective_window - 1.0)) * 2.0 - 1.0
     return signal.to_numpy().astype(np.float64)
 
 
@@ -353,6 +365,23 @@ def smooth_signal(signal: np.ndarray, window: int | None) -> np.ndarray:
         return signal.astype(np.float64, copy=True)
 
     return pd.Series(signal).rolling(int(window)).mean().to_numpy().astype(np.float64)
+
+
+def allowed_smooth_windows(
+    config: AlphaDiscoveryConfig, rank_window: int
+) -> list[int | None]:
+    max_smooth_window = rank_window * config.max_smoothing_rank_ratio
+    allowed: list[int | None] = []
+
+    for smooth_window in config.smooth_windows:
+        if smooth_window is None or pd.isna(smooth_window):
+            allowed.append(None)
+            continue
+
+        if int(smooth_window) <= max_smooth_window:
+            allowed.append(int(smooth_window))
+
+    return allowed
 
 
 def evaluate_strategies(
@@ -365,7 +394,7 @@ def evaluate_strategies(
         for rank_window in config.rank_windows:
             raw_signal = make_rank_signal(panel_df, feature, rank_window)
 
-            for smooth_window in config.smooth_windows:
+            for smooth_window in allowed_smooth_windows(config, rank_window):
                 signal = smooth_signal(raw_signal, smooth_window)
                 mask = np.isfinite(signal) & np.isfinite(forward_returns)
 
@@ -505,17 +534,23 @@ def plot_strategy_overview(
     return signal, mask
 
 
-def build_decile_summary(signal: np.ndarray, forward_returns: np.ndarray) -> pd.DataFrame:
+def build_decile_summary(
+    signal: np.ndarray, forward_returns: np.ndarray
+) -> pd.DataFrame:
     mask = np.isfinite(signal) & np.isfinite(forward_returns)
     signal_valid = signal[mask]
     returns_valid = forward_returns[mask]
 
     if signal_valid.size == 0:
-        raise RuntimeError("Best strategy produced no valid observations for decile analysis.")
+        raise RuntimeError(
+            "Best strategy produced no valid observations for decile analysis."
+        )
 
     order = np.argsort(signal_valid)
     deciles = np.empty(signal_valid.shape[0], dtype=np.int64)
-    deciles[order] = (np.arange(signal_valid.shape[0]) * 10 // signal_valid.shape[0]) + 1
+    deciles[order] = (
+        np.arange(signal_valid.shape[0]) * 10 // signal_valid.shape[0]
+    ) + 1
 
     return pd.DataFrame(
         [
@@ -528,6 +563,7 @@ def build_decile_summary(signal: np.ndarray, forward_returns: np.ndarray) -> pd.
             for decile in range(1, 11)
         ]
     )
+
 
 # %% [markdown]
 # ---
@@ -569,19 +605,30 @@ print(panel_summary.to_markdown(index=False))
 # The position direction (long or short) is set by the sign of the in-sample
 # correlation between the signal and the one-bar-ahead return.
 #
-# Because every feature is evaluated against every `(rank_window, smooth_window)`
-# pair, the search space has cardinality `features × rank_windows × smooth_windows`:
+# We do not test the full Cartesian product. Instead, smoothing is constrained by
+# ranking horizon: `None` is always allowed, and numeric smoothers are only tested
+# when `smooth_window <= rank_window / 3`. This keeps long smoothers attached to
+# long ranking windows and removes the least plausible short-rank / long-smoother
+# combinations.
 
 # %%
+window_pairs_per_feature = sum(
+    len(allowed_smooth_windows(config, rank_window))
+    for rank_window in config.rank_windows
+)
+full_grid_pairs = len(config.rank_windows) * len(config.smooth_windows)
 search_space = pd.DataFrame(
     [
         {
             "features": len(feature_cols),
             "rank_windows": len(config.rank_windows),
             "smooth_windows": len(config.smooth_windows),
-            "total_combinations": (
-                len(feature_cols) * len(config.rank_windows) * len(config.smooth_windows)
+            "window_pairs_per_feature": window_pairs_per_feature,
+            "full_grid_pairs_per_feature": full_grid_pairs,
+            "reduction_vs_full_grid_pct": (
+                100.0 * (1.0 - window_pairs_per_feature / full_grid_pairs)
             ),
+            "total_combinations": len(feature_cols) * window_pairs_per_feature,
         }
     ]
 )
@@ -591,10 +638,10 @@ print(search_space.to_markdown(index=False))
 # ---
 # ## Step 3 — Search the parameter grid
 #
-# `evaluate_strategies` traverses the full grid: for each combination it constructs
-# the signal, assigns a direction, and runs an identical transaction-cost-aware
-# position backtest. Each valid candidate is scored on annualized Sharpe, net
-# return, and maximum drawdown, then ranked by Sharpe.
+# `evaluate_strategies` traverses the constrained window schedule: for each allowed
+# combination it constructs the signal, assigns a direction, and runs an identical
+# transaction-cost-aware position backtest. Each valid candidate is scored on
+# annualized Sharpe, net return, and maximum drawdown, then ranked by Sharpe.
 
 # %%
 results_df, forward_returns = evaluate_strategies(config, panel, feature_cols)
@@ -612,7 +659,9 @@ print(top_strategies.to_markdown(index=False))
 # signal, and the resulting equity curve.
 
 # %%
-for plot_idx, (_, row) in enumerate(results_df.head(TOP_PLOT_COUNT).iterrows(), start=1):
+for plot_idx, (_, row) in enumerate(
+    results_df.head(TOP_PLOT_COUNT).iterrows(), start=1
+):
     plot_strategy_overview(config, panel, forward_returns, row, f"Candidate {plot_idx}")
 
 # %% [markdown]
@@ -672,11 +721,12 @@ print(deciles_df.to_markdown(index=False))
 # ## Step 6 — Robustness check
 #
 # Is the measured edge genuine, or an artifact of a single parameter combination?
-# The heatmap shows the top feature's Sharpe across the full `rank_window ×
-# smooth_window` grid. An isolated high-Sharpe cell among weak neighbors indicates
-# overfitting; a contiguous high-Sharpe region indicates the edge degrades
-# gracefully under parameter perturbation, which is characteristic of a robust
-# signal.
+# The heatmap shows the top feature's Sharpe across the tested `rank_window ×
+# smooth_window` combinations. Blank cells were intentionally not evaluated because
+# the smoother was too long relative to the ranking horizon. An isolated
+# high-Sharpe cell among weak neighbors indicates overfitting; a contiguous
+# high-Sharpe region indicates the edge degrades gracefully under parameter
+# perturbation, which is characteristic of a robust signal.
 #
 # > **Scope.** This assesses robustness to parameter selection in-sample. It is a
 # > diagnostic, not a substitute for out-of-sample validation — see *Next steps*.
@@ -689,18 +739,26 @@ best_feature_results = results_df.loc[
 heatmap = best_feature_results.pivot(
     index="rank_window", columns="smooth_window", values="sharpe"
 ).sort_index()
+heatmap = heatmap.reindex(index=config.rank_windows, columns=config.smooth_windows)
 heatmap = heatmap.rename(columns={None: "None"})
+heatmap_plot = heatmap.copy()
+heatmap_plot.columns = [str(col) for col in heatmap_plot.columns]
+masked_heatmap = np.ma.masked_invalid(heatmap_plot.to_numpy(dtype=float))
 
 fig, ax = plt.subplots(figsize=(8, 4))
-image = ax.imshow(heatmap.to_numpy(), aspect="auto", cmap="RdYlGn")
+cmap = plt.get_cmap("RdYlGn").copy()
+cmap.set_bad(color="#f3f4f6")
+image = ax.imshow(masked_heatmap, aspect="auto", cmap=cmap)
 ax.set_title(f"Sharpe by window combination for {best['feature']}")
 ax.set_xlabel("Smooth window")
 ax.set_ylabel("Rank window")
-ax.set_xticks(np.arange(len(heatmap.columns)), labels=heatmap.columns)
-ax.set_yticks(np.arange(len(heatmap.index)), labels=heatmap.index)
+ax.set_xticks(np.arange(len(heatmap_plot.columns)), labels=heatmap_plot.columns)
+ax.set_yticks(np.arange(len(heatmap_plot.index)), labels=heatmap_plot.index)
 
-for row_idx, row_values in enumerate(heatmap.to_numpy()):
+for row_idx, row_values in enumerate(heatmap_plot.to_numpy(dtype=float)):
     for col_idx, value in enumerate(row_values):
+        if not np.isfinite(value):
+            continue
         ax.text(col_idx, row_idx, f"{value:.2f}", ha="center", va="center", fontsize=9)
 
 fig.colorbar(image, ax=ax, label="Annualized Sharpe")
@@ -726,8 +784,8 @@ print(top_feature_summary.to_markdown(index=False))
 # - **Loaded** price and microstructure features and constructed a one-bar-ahead
 #   return target.
 # - **Constructed** scale-free ranked signals, with optional smoothing.
-# - **Searched** the full feature × window grid, scoring every candidate on a
-#   cost-aware backtest.
+# - **Searched** a horizon-aligned feature × window schedule, scoring every tested
+#   candidate on a cost-aware backtest.
 # - **Validated** the leading candidates via equity curve, decile monotonicity, and
 #   parameter-robustness diagnostics.
 #
@@ -802,8 +860,9 @@ panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
 panel = panel.dropna(subset=["fwd_ret"])
 
 # 2. Rebuild the ranked (and optionally smoothed) signal, then form the position.
-rank = panel[FEATURE].rolling(RANK_WINDOW).rank(method="average")
-signal = ((rank - 1.0) / (RANK_WINDOW - 1)) * 2.0 - 1.0
+rolling_rank = panel[FEATURE].rolling(RANK_WINDOW, min_periods=10).rank(method="average")
+effective_window = panel[FEATURE].rolling(RANK_WINDOW, min_periods=10).count()
+signal = ((rolling_rank - 1.0) / (effective_window - 1.0)) * 2.0 - 1.0
 if SMOOTH_WINDOW:
     signal = signal.rolling(SMOOTH_WINDOW).mean()
 position = (signal * DIRECTION).clip(-1.0, 1.0)
