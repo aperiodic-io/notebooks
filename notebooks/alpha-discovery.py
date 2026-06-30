@@ -39,66 +39,18 @@
 # ### The pipeline
 #
 # The workflow spans three phases — **construction**, **search**, and
-# **validation** — across six steps. Run the cell below for the color-coded
-# roadmap; each step that follows maps to one node.
-
-# %%
-import matplotlib.pyplot as plt
-
-
-def pipeline_diagram() -> None:
-    phases = [
-        ("Construction", "tab:blue", ["Load", "Inspect"]),
-        ("Search", "tab:orange", ["Rank", "Smooth"]),
-        ("Validation", "tab:green", ["Compare", "Check"]),
-    ]
-
-    fig, ax = plt.subplots(figsize=(12, 2.2))
-    ax.set_xlim(0, 12)
-    ax.set_ylim(0, 3)
-    ax.axis("off")
-
-    x = 0.65
-    for phase_name, color, steps in phases:
-        ax.add_patch(
-            plt.Rectangle(
-                (x, 1.05),
-                3.25,
-                1.1,
-                facecolor=color,
-                alpha=0.12,
-                edgecolor=color,
-                linewidth=1.6,
-            )
-        )
-        ax.text(
-            x + 1.62,
-            2.02,
-            phase_name.upper(),
-            ha="center",
-            va="center",
-            fontsize=10,
-            fontweight="bold",
-            color=color,
-        )
-        ax.text(
-            x + 1.62, 1.48, " • ".join(steps), ha="center", va="center", fontsize=10
-        )
-        x += 3.45
-
-    for arrow_x in [4.0, 7.45]:
-        ax.annotate(
-            "",
-            xy=(arrow_x + 0.22, 1.58),
-            xytext=(arrow_x - 0.22, 1.58),
-            arrowprops=dict(arrowstyle="->", lw=1.8, color="0.35"),
-        )
-
-
-pipeline_diagram()
-
-
-# %% [markdown]
+# **validation** — across six steps.
+#
+# ```text
+# +------------------+     +------------------+     +----------------------+
+# | Construction     | --> | Search           | --> | Validation           |
+# | - Load           |     | - Rank           |     | - Compare            |
+# | - Inspect        |     | - Smooth         |     | - Check              |
+# +------------------+     +------------------+     +----------------------+
+# ```
+#
+# Each step that follows maps to one node in that pipeline.
+#
 # ---
 # ## Setup — Configuration
 #
@@ -180,7 +132,7 @@ config = AlphaDiscoveryConfig(
 
 # Display parameters for the tables and plots below.
 TOP_STRATEGY_COUNT = 10
-TOP_PLOT_COUNT = 3
+TOP_PLOT_COUNT = 5
 
 # %% [markdown]
 # ---
@@ -446,22 +398,43 @@ def evaluate_strategies(
 
 def summarize_top_strategies(results_df: pd.DataFrame, top_n: int) -> pd.DataFrame:
     summary = results_df.head(top_n).copy()
+    return format_strategy_summary(summary)
+
+
+def summarize_diverse_top_strategies(
+    results_df: pd.DataFrame,
+    feature_sources: dict[str, tuple[str, str]],
+    top_n: int,
+) -> pd.DataFrame:
+    summary = results_df.copy()
+    summary["metric_type"] = summary["feature"].map(
+        lambda feature: feature_sources.get(str(feature), (str(feature), "regular"))[0]
+    )
+    summary = summary.drop_duplicates(subset=["metric_type"], keep="first").head(top_n)
+    return format_strategy_summary(summary, include_metric_type=True)
+
+
+def format_strategy_summary(
+    summary: pd.DataFrame, include_metric_type: bool = False
+) -> pd.DataFrame:
+    summary = summary.copy()
     summary["smooth_window"] = summary["smooth_window"].map(
         lambda value: "None" if value is None or pd.isna(value) else int(value)
     )
     summary["direction"] = summary["direction"].map({1: "long", -1: "short"})
-    return summary[
-        [
-            "feature",
-            "rank_window",
-            "smooth_window",
-            "direction",
-            "fit_corr",
-            "sharpe",
-            "return_pct",
-            "drawdown_pct",
-        ]
+    columns = [
+        "feature",
+        "rank_window",
+        "smooth_window",
+        "direction",
+        "fit_corr",
+        "sharpe",
+        "return_pct",
+        "drawdown_pct",
     ]
+    if include_metric_type:
+        columns = ["metric_type", *columns]
+    return summary[columns]
 
 
 def build_strategy_artifacts(
@@ -482,6 +455,14 @@ def build_strategy_artifacts(
         cost_bps_one_way=config.cost_bps,
     )
     return raw_signal, signal, bt_frame, bt_summary, mask
+
+
+def describe_strategy(
+    row: pd.Series, feature_sources: dict[str, tuple[str, str]]
+) -> str:
+    feature = str(row["feature"])
+    metric_type, metric_category = feature_sources.get(feature, (feature, "regular"))
+    return f"{feature} | metric={metric_type} | category={metric_category}"
 
 
 def plot_strategy_overview(
@@ -642,27 +623,53 @@ print(search_space.to_markdown(index=False))
 # combination it constructs the signal, assigns a direction, and runs an identical
 # transaction-cost-aware position backtest. Each valid candidate is scored on
 # annualized Sharpe, net return, and maximum drawdown, then ranked by Sharpe.
+#
+# **Decision.** We report two leaderboards:
+# - the raw top-Sharpe list, which may contain many variants from the same source
+#   metric family
+# - a diversified list that keeps only the best strategy per metric family
+#
+# This second view makes the results easier to interpret because it answers a
+# different question: which *data sources* are strongest, rather than which small
+# parameter variations dominate the same source repeatedly.
 
 # %%
 results_df, forward_returns = evaluate_strategies(config, panel, feature_cols)
 top_strategies = summarize_top_strategies(results_df, TOP_STRATEGY_COUNT)
+diverse_top_strategies = summarize_diverse_top_strategies(
+    results_df, feature_sources, TOP_STRATEGY_COUNT
+)
 
 print("Top strategies by Sharpe:")
 print(top_strategies.to_markdown(index=False))
+
+print("\nTop strategies by Sharpe, one per metric family:")
+print(diverse_top_strategies.to_markdown(index=False))
 
 # %% [markdown]
 # ---
 # ## Step 4 — Compare the leading candidates
 #
 # The ranking identifies the strongest candidates; the plots characterize their
-# behavior. For the leading candidates we show the raw ranked signal, the smoothed
+# behavior. To keep this comparison diverse, we plot the best candidate from each
+# metric family rather than multiple near-duplicates from the same source. For the
+# top five diversified candidates we show the raw ranked signal, the smoothed
 # signal, and the resulting equity curve.
 
 # %%
-for plot_idx, (_, row) in enumerate(
-    results_df.head(TOP_PLOT_COUNT).iterrows(), start=1
-):
-    plot_strategy_overview(config, panel, forward_returns, row, f"Candidate {plot_idx}")
+diverse_plot_rows = (
+    results_df.assign(
+        metric_type=lambda df: df["feature"].map(
+            lambda feature: feature_sources.get(str(feature), (str(feature), "regular"))[0]
+        )
+    )
+    .drop_duplicates(subset=["metric_type"], keep="first")
+    .head(TOP_PLOT_COUNT)
+)
+
+for _, row in diverse_plot_rows.iterrows():
+    strategy_label = describe_strategy(row, feature_sources)
+    plot_strategy_overview(config, panel, forward_returns, row, strategy_label)
 
 # %% [markdown]
 # ---
@@ -677,7 +684,7 @@ for plot_idx, (_, row) in enumerate(
 # %%
 best = results_df.iloc[0]
 best_signal, best_mask = plot_strategy_overview(
-    config, panel, forward_returns, best, "Best strategy"
+    config, panel, forward_returns, best, describe_strategy(best, feature_sources)
 )
 
 best_summary = pd.DataFrame(
