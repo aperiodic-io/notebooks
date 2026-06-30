@@ -39,7 +39,51 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from aperiodic import get_derivative_metrics, get_metrics, get_ohlcv
-from utils._aperiodic_demo import run_position_backtest
+
+
+def run_position_backtest(
+    timestamps: pd.Series,
+    position: np.ndarray,
+    forward_return: np.ndarray,
+    cost_bps_one_way: float = 0.0,
+) -> tuple[pd.DataFrame, dict]:
+    position = np.asarray(position, dtype=np.float64)
+    forward_return = np.asarray(forward_return, dtype=np.float64)
+
+    gross_pnl = position * forward_return
+    turnover = np.abs(np.diff(position, prepend=0.0))
+    cost = turnover * cost_bps_one_way / 1e4
+    net_pnl = gross_pnl - cost
+    equity = np.cumprod(1.0 + net_pnl)
+
+    if equity.size == 0:
+        bt_frame = pd.DataFrame({"timestamp": timestamps.to_numpy(), "equity_curve": equity})
+        bt_summary = {
+            "annualized_sharpe": 0.0,
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+        }
+        return bt_frame, bt_summary
+
+    running_max = np.maximum.accumulate(equity)
+    drawdowns = (equity - running_max) / running_max
+    max_drawdown_pct = float(np.min(drawdowns)) * 100.0
+
+    bars_per_year = 288 * 365
+    mean_ret = float(np.mean(net_pnl))
+    std_ret = float(np.std(net_pnl, ddof=1)) if len(net_pnl) > 1 else 1.0
+    annualized_sharpe = (mean_ret / std_ret) * np.sqrt(bars_per_year) if std_ret > 0 else 0.0
+    net_return_pct = (
+        float((equity[-1] / equity[0] - 1.0) * 100.0) if len(equity) > 0 else 0.0
+    )
+
+    bt_frame = pd.DataFrame({"timestamp": timestamps.to_numpy(), "equity_curve": equity})
+    bt_summary = {
+        "annualized_sharpe": float(annualized_sharpe),
+        "net_return_pct": net_return_pct,
+        "max_drawdown_pct": max_drawdown_pct,
+    }
+    return bt_frame, bt_summary
 
 SYMBOL = "perpetual-BTC-USDT:USDT"
 EXCHANGE = "binance-futures"

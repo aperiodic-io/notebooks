@@ -42,7 +42,54 @@
 # roadmap; each step that follows maps to one node.
 
 # %%
-from utils._alpha_discovery import pipeline_diagram
+import matplotlib.pyplot as plt
+
+
+def pipeline_diagram() -> None:
+    phases = [
+        ("Construction", "tab:blue", ["Load", "Inspect"]),
+        ("Search", "tab:orange", ["Rank", "Smooth"]),
+        ("Validation", "tab:green", ["Compare", "Check"]),
+    ]
+
+    fig, ax = plt.subplots(figsize=(12, 2.2))
+    ax.set_xlim(0, 12)
+    ax.set_ylim(0, 3)
+    ax.axis("off")
+
+    x = 0.65
+    for phase_name, color, steps in phases:
+        ax.add_patch(
+            plt.Rectangle(
+                (x, 1.05),
+                3.25,
+                1.1,
+                facecolor=color,
+                alpha=0.12,
+                edgecolor=color,
+                linewidth=1.6,
+            )
+        )
+        ax.text(
+            x + 1.62,
+            2.02,
+            phase_name.upper(),
+            ha="center",
+            va="center",
+            fontsize=10,
+            fontweight="bold",
+            color=color,
+        )
+        ax.text(x + 1.62, 1.48, " • ".join(steps), ha="center", va="center", fontsize=10)
+        x += 3.45
+
+    for arrow_x in [4.0, 7.45]:
+        ax.annotate(
+            "",
+            xy=(arrow_x + 0.22, 1.58),
+            xytext=(arrow_x - 0.22, 1.58),
+            arrowprops=dict(arrowstyle="->", lw=1.8, color="0.35"),
+        )
 
 pipeline_diagram()
 
@@ -69,19 +116,35 @@ pipeline_diagram()
 # %%
 import datetime
 import os
+from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from IPython.display import Markdown, display
 
-from utils._alpha_discovery import WalkthroughConfig
-
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
     API_KEY = os.getenv("APERIODIC_API_KEY", "...")
 if API_KEY == "...":
     raise RuntimeError("Set APERIODIC_API_KEY in the environment or in .env.")
+
+
+@dataclass(frozen=True)
+class WalkthroughConfig:
+    """All parameters for the alpha-discovery walkthrough in one place."""
+
+    api_key: str
+    symbol: str
+    exchange: str
+    interval: str
+    timestamp: str
+    start_date: datetime.date
+    end_date: datetime.date
+    metrics: list[tuple[str, str]]
+    rank_windows: list[int]
+    smooth_windows: list[int | None]
+    cost_bps: float
 
 config = WalkthroughConfig(
     api_key=API_KEY,
@@ -118,20 +181,350 @@ TOP_PLOT_COUNT = 3
 # ---
 # ## Setup — Helper functions
 #
-# The data retrieval, signal construction, search, and plotting routines live in
-# [`utils/_alpha_discovery.py`](utils/_alpha_discovery.py) so the notebook stays
-# focused on method rather than plumbing. They are imported below; each step
-# describes the routine it calls, and the module holds the full implementation.
+# The data retrieval, signal construction, search, and plotting routines are
+# defined below in this notebook so the walkthrough stays self-contained.
 
 # %%
-from utils._alpha_discovery import (
-    build_decile_summary,
-    build_panel,
-    evaluate_strategies,
-    plot_strategy_overview,
-    summarize_panel,
-    summarize_top_strategies,
-)
+from aperiodic import get_derivative_metrics, get_metrics, get_ohlcv
+
+
+def run_position_backtest(
+    timestamps: pd.Series,
+    position: np.ndarray,
+    forward_return: np.ndarray,
+    cost_bps_one_way: float = 0.0,
+) -> tuple[pd.DataFrame, dict]:
+    position = np.asarray(position, dtype=np.float64)
+    forward_return = np.asarray(forward_return, dtype=np.float64)
+
+    gross_pnl = position * forward_return
+    turnover = np.abs(np.diff(position, prepend=0.0))
+    cost = turnover * cost_bps_one_way / 1e4
+    net_pnl = gross_pnl - cost
+    equity = np.cumprod(1.0 + net_pnl)
+
+    if equity.size == 0:
+        bt_frame = pd.DataFrame({"timestamp": timestamps.to_numpy(), "equity_curve": equity})
+        bt_summary = {
+            "annualized_sharpe": 0.0,
+            "net_return_pct": 0.0,
+            "max_drawdown_pct": 0.0,
+        }
+        return bt_frame, bt_summary
+
+    running_max = np.maximum.accumulate(equity)
+    drawdowns = (equity - running_max) / running_max
+    max_drawdown_pct = float(np.min(drawdowns)) * 100.0
+
+    bars_per_year = 288 * 365
+    mean_ret = float(np.mean(net_pnl))
+    std_ret = float(np.std(net_pnl, ddof=1)) if len(net_pnl) > 1 else 1.0
+    annualized_sharpe = (mean_ret / std_ret) * np.sqrt(bars_per_year) if std_ret > 0 else 0.0
+    net_return_pct = (
+        float((equity[-1] / equity[0] - 1.0) * 100.0) if len(equity) > 0 else 0.0
+    )
+
+    bt_frame = pd.DataFrame({"timestamp": timestamps.to_numpy(), "equity_curve": equity})
+    bt_summary = {
+        "annualized_sharpe": float(annualized_sharpe),
+        "net_return_pct": net_return_pct,
+        "max_drawdown_pct": max_drawdown_pct,
+    }
+    return bt_frame, bt_summary
+
+
+def get_numeric_metric_frame(
+    config: WalkthroughConfig, metric: str, kind: str
+) -> pd.DataFrame | None:
+    fetcher = get_derivative_metrics if kind == "derivative" else get_metrics
+    raw_frame = fetcher(
+        api_key=config.api_key,
+        metric=metric,
+        timestamp=config.timestamp,
+        interval=config.interval,
+        exchange=config.exchange,
+        symbol=config.symbol,
+        start_date=config.start_date,
+        end_date=config.end_date,
+        output="pandas",
+        show_progress=True,
+        preview=True,
+    )
+
+    frame = (
+        raw_frame.to_pandas()
+        if hasattr(raw_frame, "to_pandas")
+        else pd.DataFrame(raw_frame)
+    )
+    if frame.empty or "time" not in frame.columns:
+        print(f"Skipping {metric}: no rows returned.")
+        return None
+
+    numeric_cols = frame.select_dtypes(include=[np.number]).columns.tolist()
+    if "time" in numeric_cols:
+        numeric_cols.remove("time")
+
+    if not numeric_cols:
+        print(f"Skipping {metric}: no numeric columns returned.")
+        return None
+
+    return frame.sort_values("time").drop_duplicates(subset=["time"], keep="last")[
+        ["time", *numeric_cols]
+    ]
+
+
+def build_panel(
+    config: WalkthroughConfig,
+) -> tuple[pd.DataFrame, list[str], dict[str, tuple[str, str]]]:
+    raw_ohlcv = get_ohlcv(
+        api_key=config.api_key,
+        timestamp=config.timestamp,
+        interval=config.interval,
+        exchange=config.exchange,
+        symbol=config.symbol,
+        start_date=config.start_date,
+        end_date=config.end_date,
+        output="pandas",
+        show_progress=True,
+        preview=True,
+    )
+
+    panel = (
+        raw_ohlcv.to_pandas()
+        if hasattr(raw_ohlcv, "to_pandas")
+        else pd.DataFrame(raw_ohlcv)
+    )
+    panel = panel.sort_values("time")[["time", "close"]]
+
+    feature_sources: dict[str, tuple[str, str]] = {}
+    for metric, kind in config.metrics:
+        frame = get_numeric_metric_frame(config, metric, kind)
+        if frame is None:
+            continue
+
+        feature_values = [col for col in frame.columns if col != "time"]
+        if frame[feature_values].notna().sum().sum() == 0:
+            print(f"Skipping {metric}: all feature values are null.")
+            continue
+
+        panel = panel.merge(frame, on="time", how="left")
+        for col in feature_values:
+            feature_sources[col] = (metric, kind)
+
+    panel = panel.sort_values("time")
+    feature_cols = [
+        col
+        for col in panel.columns
+        if col not in {"time", "close"} and pd.api.types.is_numeric_dtype(panel[col])
+    ]
+
+    panel[feature_cols] = panel[feature_cols].ffill()
+    panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
+    panel = panel.dropna(subset=["fwd_ret"])
+
+    feature_sources = {col: feature_sources[col] for col in feature_cols if col in feature_sources}
+    return panel, feature_cols, feature_sources
+
+
+def summarize_panel(panel_df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "feature": feature,
+                "non_null_pct": float(panel_df[feature].notna().mean() * 100.0),
+                "std": float(panel_df[feature].std()),
+            }
+            for feature in feature_cols[:10]
+        ]
+    )
+
+
+def make_rank_signal(panel_df: pd.DataFrame, feature: str, window: int) -> np.ndarray:
+    rank = panel_df[feature].rolling(window).rank(method="average")
+    signal = ((rank - 1.0) / (window - 1)) * 2.0 - 1.0
+    return signal.to_numpy().astype(np.float64)
+
+
+def smooth_signal(signal: np.ndarray, window: int | None) -> np.ndarray:
+    if window is None or pd.isna(window) or int(window) == 1:
+        return signal.astype(np.float64, copy=True)
+
+    return pd.Series(signal).rolling(int(window)).mean().to_numpy().astype(np.float64)
+
+
+def evaluate_strategies(
+    config: WalkthroughConfig, panel_df: pd.DataFrame, feature_cols: list[str]
+) -> tuple[pd.DataFrame, np.ndarray]:
+    forward_returns = panel_df["fwd_ret"].to_numpy().astype(np.float64)
+    results: list[dict[str, float | int | str | None]] = []
+
+    for feature in feature_cols:
+        for rank_window in config.rank_windows:
+            raw_signal = make_rank_signal(panel_df, feature, rank_window)
+
+            for smooth_window in config.smooth_windows:
+                signal = smooth_signal(raw_signal, smooth_window)
+                mask = np.isfinite(signal) & np.isfinite(forward_returns)
+
+                signal_valid = signal[mask]
+                returns_valid = forward_returns[mask]
+                if (
+                    signal_valid.size < 2
+                    or np.std(signal_valid) == 0.0
+                    or np.std(returns_valid) == 0.0
+                ):
+                    continue
+
+                fit_corr = float(np.corrcoef(signal_valid, returns_valid)[0, 1])
+                if not np.isfinite(fit_corr):
+                    continue
+
+                direction = 1 if fit_corr >= 0 else -1
+                _, bt_summary = run_position_backtest(
+                    timestamps=panel_df.loc[mask, "time"],
+                    position=np.nan_to_num(
+                        np.clip(signal_valid * direction, -1.0, 1.0), nan=0.0
+                    ),
+                    forward_return=returns_valid,
+                    cost_bps_one_way=config.cost_bps,
+                )
+
+                results.append(
+                    {
+                        "feature": feature,
+                        "rank_window": rank_window,
+                        "smooth_window": smooth_window,
+                        "direction": direction,
+                        "fit_corr": fit_corr,
+                        "sharpe": bt_summary["annualized_sharpe"],
+                        "return_pct": bt_summary["net_return_pct"],
+                        "drawdown_pct": bt_summary["max_drawdown_pct"],
+                    }
+                )
+
+    if not results:
+        raise RuntimeError(
+            "No valid feature/window combinations were produced. "
+            "Check the fetched metric coverage for the selected date range."
+        )
+
+    results_df = pd.DataFrame(results).sort_values("sharpe", ascending=False)
+    return results_df, forward_returns
+
+
+def summarize_top_strategies(results_df: pd.DataFrame, top_n: int) -> pd.DataFrame:
+    summary = results_df.head(top_n).copy()
+    summary["smooth_window"] = summary["smooth_window"].map(
+        lambda value: "None" if value is None or pd.isna(value) else int(value)
+    )
+    summary["direction"] = summary["direction"].map({1: "long", -1: "short"})
+    return summary[
+        [
+            "feature",
+            "rank_window",
+            "smooth_window",
+            "direction",
+            "fit_corr",
+            "sharpe",
+            "return_pct",
+            "drawdown_pct",
+        ]
+    ]
+
+
+def build_strategy_artifacts(
+    config: WalkthroughConfig,
+    panel_df: pd.DataFrame,
+    forward_returns: np.ndarray,
+    row: pd.Series,
+) -> tuple[np.ndarray, np.ndarray, pd.DataFrame, dict[str, float], np.ndarray]:
+    raw_signal = make_rank_signal(
+        panel_df, str(row["feature"]), int(row["rank_window"])
+    )
+    signal = smooth_signal(raw_signal, row["smooth_window"]) * int(row["direction"])
+    mask = np.isfinite(signal) & np.isfinite(forward_returns)
+    bt_frame, bt_summary = run_position_backtest(
+        timestamps=panel_df.loc[mask, "time"],
+        position=np.nan_to_num(np.clip(signal[mask], -1.0, 1.0), nan=0.0),
+        forward_return=forward_returns[mask],
+        cost_bps_one_way=config.cost_bps,
+    )
+    return raw_signal, signal, bt_frame, bt_summary, mask
+
+
+def plot_strategy_overview(
+    config: WalkthroughConfig,
+    panel_df: pd.DataFrame,
+    forward_returns: np.ndarray,
+    row: pd.Series,
+    title_prefix: str,
+) -> tuple[np.ndarray, np.ndarray]:
+    raw_signal, signal, bt_frame, _, mask = build_strategy_artifacts(
+        config, panel_df, forward_returns, row
+    )
+    smooth_label = (
+        "None"
+        if row["smooth_window"] is None or pd.isna(row["smooth_window"])
+        else int(row["smooth_window"])
+    )
+
+    fig, axes = plt.subplots(3, 1, figsize=(14, 8), sharex=True)
+    axes[0].plot(panel_df["time"], raw_signal, linewidth=0.8, color="tab:orange")
+    axes[0].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
+    axes[0].set_title(f"{title_prefix} raw rank signal | {row['feature']}")
+    axes[0].grid(alpha=0.2)
+
+    axes[1].plot(panel_df["time"], signal, linewidth=0.9, color="tab:red")
+    axes[1].axhline(0.0, color="black", linewidth=0.7, alpha=0.5)
+    axes[1].set_title(
+        f"{title_prefix} smoothed signal"
+        f" | rank={int(row['rank_window'])}"
+        f" | smooth={smooth_label}"
+        f" | dir={int(row['direction'])}"
+    )
+    axes[1].grid(alpha=0.2)
+
+    axes[2].plot(
+        bt_frame["timestamp"],
+        bt_frame["equity_curve"],
+        linewidth=1.1,
+        color="tab:green",
+    )
+    axes[2].set_title(
+        f"{title_prefix} equity"
+        f" | Sharpe={float(row['sharpe']):.3f}"
+        f" | Ret={float(row['return_pct']):.3f}"
+    )
+    axes[2].grid(alpha=0.2)
+
+    fig.tight_layout()
+    plt.show()
+    return signal, mask
+
+
+def build_decile_summary(signal: np.ndarray, forward_returns: np.ndarray) -> pd.DataFrame:
+    mask = np.isfinite(signal) & np.isfinite(forward_returns)
+    signal_valid = signal[mask]
+    returns_valid = forward_returns[mask]
+
+    if signal_valid.size == 0:
+        raise RuntimeError("Best strategy produced no valid observations for decile analysis.")
+
+    order = np.argsort(signal_valid)
+    deciles = np.empty(signal_valid.shape[0], dtype=np.int64)
+    deciles[order] = (np.arange(signal_valid.shape[0]) * 10 // signal_valid.shape[0]) + 1
+
+    return pd.DataFrame(
+        [
+            {
+                "decile": decile,
+                "count": int((decile_mask := deciles == decile).sum()),
+                "mean_signal": float(np.nanmean(signal_valid[decile_mask])),
+                "mean_fwd_ret": float(np.nanmean(returns_valid[decile_mask])),
+            }
+            for decile in range(1, 11)
+        ]
+    )
 
 # %% [markdown]
 # ---
