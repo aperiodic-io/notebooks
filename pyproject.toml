@@ -23,6 +23,7 @@ dependencies = [
     "pyarrow",
     "matplotlib",
     "seaborn",
+    "tabulate",
 ]
 
 [project.optional-dependencies]
