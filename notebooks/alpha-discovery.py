@@ -599,44 +599,36 @@ print(panel[["time", "close", "fwd_ret"]].head().to_markdown(index=False))
 # A raw feature is not directly tradeable: its level is non-stationary and its units
 # are arbitrary. Two transforms address this:
 #
-# 1. **Percentile rank.** Within a rolling window of `rank_window` bars, each value
+# 1. **Smoothing (optional).** A moving average of `smooth_window` bars applied to
+#    the ranked signal trades responsiveness for stability; `None` leaves it
+#    unsmoothed.
+# 2. **Percentile rank.** Within a rolling window of `rank_window` bars, each value
 #    is replaced by its percentile rank and rescaled to `[-1, +1]`. A high value
 #    means "elevated relative to recent history," a low value the opposite — a
 #    scale-free measure that is comparable across features.
-# 2. **Smoothing (optional).** A moving average of `smooth_window` bars applied to
-#    the ranked signal trades responsiveness for stability; `None` leaves it
-#    unsmoothed.
 #
-# When smoothing helps, the interpretation is usually simple: for the
-# high-frequency alpha to survive transaction costs, we need to slow it down.
+# Smoothing is essential for alpha to survive even minimal transaction costs, when
+# one works with market microstructure / liquidity / flow metrics. They're simply
+# too high frequency to be traded as-is.
 #
 # The position direction (long or short) is set by the sign of the in-sample
 # correlation between the signal and the one-bar-ahead return.
-#
-# We do not test the full Cartesian product. Instead, smoothing is constrained by
-# ranking horizon: `None` is always allowed, and numeric smoothers are only tested
-# when `smooth_window <= rank_window / 3`. This keeps long smoothers attached to
-# long ranking windows and removes the least plausible short-rank / long-smoother
-# combinations.
 
-# %%
 # %% [markdown]
 # ---
-# ## Step 3 — Search the parameter grid
+# ## Step 3 — Target Signal Turnover
 #
 # `evaluate_strategies` traverses the constrained window schedule: for each allowed
 # combination it constructs the signal, assigns a direction, and runs an identical
 # transaction-cost-aware position backtest. Each valid candidate is scored on
 # annualized Sharpe, net return, and maximum drawdown, then ranked by Sharpe.
 #
-# **Decision.** We report two leaderboards:
-# - the raw top-Sharpe list, which may contain many variants from the same source
-#   metric family
-# - a diversified list that keeps only the best strategy per metric family
-#
-# This second view makes the results easier to interpret because it answers a
-# different question: which *data sources* are strongest, rather than which small
-# parameter variations dominate the same source repeatedly.
+# The ranking identifies the strongest candidates; the plots characterize their
+# behavior. To keep this comparison diverse, we plot the best candidate from each
+# metric family rather than multiple near-duplicates from the same source. For the
+# top five diversified candidates we show the raw ranked signal, the smoothed
+# signal, the equity curve, and two bottom diagnostics: mean forward returns by
+# decile and the feature's robustness across the tested window combinations.
 
 # %%
 results_df, forward_returns = evaluate_strategies(config, panel, feature_cols)
@@ -650,17 +642,6 @@ print(diverse_top_strategies.to_markdown(index=False))
 
 print("Top strategies by Sharpe:")
 print(top_strategies.to_markdown(index=False))
-
-# %% [markdown]
-# ---
-# ## Step 4 — Compare the leading candidates
-#
-# The ranking identifies the strongest candidates; the plots characterize their
-# behavior. To keep this comparison diverse, we plot the best candidate from each
-# metric family rather than multiple near-duplicates from the same source. For the
-# top five diversified candidates we show the raw ranked signal, the smoothed
-# signal, the equity curve, and two bottom diagnostics: mean forward returns by
-# decile and the feature's robustness across the tested window combinations.
 
 # %%
 diverse_plot_rows = (
@@ -679,10 +660,6 @@ for _, row in diverse_plot_rows.iterrows():
         config, panel, forward_returns, results_df, row, strategy_label
     )
 
-# %% [markdown]
-# ---
-# ## Step 5 — Examine the best candidate
-#
 # %%
 best = results_df.iloc[0]
 best_signal, best_mask = plot_strategy_overview(
@@ -717,33 +694,13 @@ print(best_summary.to_markdown(index=False))
 
 # %% [markdown]
 # ---
-# ## Recap
+# ## Recap and Next Steps
 #
 # The exercise is using the preview data available, which is a single month in
 # 2025, and naturally it's easy to find a strategy that worked well for a short
 # period, especially when trying a hundred potential candidates, in sample.
 #
 # Try out the subscriptions to get access to 4 years of historical data!
-
-# %% [markdown]
-# ---
-# ## Next steps
-#
-# The natural follow-up is **out-of-sample validation**: re-run the selected
-# configuration on a later period, a different instrument, or another venue. An edge
-# that persists out-of-sample warrants further study.
-#
-# The cell below prints a **standalone snippet**, pre-filled with this run's selected
-# configuration. It depends only on `aperiodic`, `numpy`, and `pandas` — no code from
-# this repository — so it can be copied into any environment and run as-is. It
-# defaults to the in-sample window on preview data and reports the configuration's
-# annualized Sharpe, net return, and maximum drawdown; change the dates (and set
-# `PREVIEW = False` with a full API key) to validate out-of-sample.
-
-# %%
-# %% [markdown]
-# ---
-# ## Follow-ups
 #
 # The next improvements to pursue are straightforward:
 #
