@@ -16,9 +16,6 @@
 #     name: python3
 # ---
 
-# %%
-# aperiodic: uses_preview_data
-
 # %% [markdown]
 # # Alpha Discovery
 #

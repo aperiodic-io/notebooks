@@ -153,6 +153,18 @@
     padding: 1px 4px;
   }
 
+  /* Markdown fenced code blocks (e.g. the ASCII pipeline diagram) render as a
+     bare .highlight whose background falls back to the default white editor
+     colour in light mode, clashing with the warm page. Blend them into the
+     page background. Python input cells live under .cm-editor and keep their
+     own styling. */
+  .jp-RenderedMarkdown .highlight,
+  .jp-RenderedMarkdown .highlight pre,
+  .jp-MarkdownOutput .highlight,
+  .jp-MarkdownOutput .highlight pre {
+    background: var(--ap-bg) !important;
+  }
+
   /* Tables */
   .jp-RenderedHTMLCommon table,
   .dataframe {

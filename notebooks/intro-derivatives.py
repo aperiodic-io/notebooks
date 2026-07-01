@@ -16,8 +16,6 @@
 #     name: python3
 # ---
 
-# aperiodic: uses_preview_data
-
 # %% [markdown]
 # # Intro to Aperiodic Derivatives Metrics
 #
