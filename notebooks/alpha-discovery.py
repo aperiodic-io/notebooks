@@ -22,41 +22,30 @@
 # %% [markdown]
 # # Alpha Discovery
 #
-# A structured, end-to-end alpha-discovery notebook. The research logic is broken
-# into discrete, documented stages so each part of the pipeline can be examined on
-# its own.
+# We define **Directional Alpha** as a signal that exhibits a consistent positive
+# or negative relationship with forward returns.
 #
-# **What this notebook covers**
+# The core task in alpha discovery is to transform a raw time series into a signal
+# that:
+# - ranges from `-1` to `1`
+# - has a reasonable distribution, ideally close to uniform
+# - is slow enough to survive transaction costs
 #
-# - converting raw microstructure metrics into scale-free, bounded signals
-# - a systematic search over the feature and parameter space, scoring each candidate
-#   on a transaction-cost-aware backtest
-# - diagnostics that distinguish a robust edge from parameter-specific overfitting
-# - a standalone snippet for reproducing the selected configuration out-of-sample
-#
-# The notebook runs end to end on preview data.
-#
-# ### The pipeline
-#
-# The workflow spans three phases — **construction**, **search**, and
-# **validation** — across six steps.
+# The notebook runs end to end on preview data (single month - May 2025).
 #
 # ```text
-# +------------------+     +------------------+     +----------------------+
-# | Construction     | --> | Search           | --> | Validation           |
-# | - Load           |     | - Rank           |     | - Compare            |
-# | - Inspect        |     | - Smooth         |     | - Check              |
-# +------------------+     +------------------+     +----------------------+
+# +------------------+     +--------------+     +-----------------------------+
+# | Raw Metric       | --> | Smoothing    | --> | Rolling Rank Transformation |
+# +------------------+     +--------------+     +-----------------------------+
+#                                                   |
+#                                                   v
+#                                   +---------------------+     +----------------+
+#                                   | Long/Short Position | --> | Backtest       |
+#                                   +---------------------+     +----------------+
 # ```
-#
-# Each step that follows maps to one node in that pipeline.
 #
 # ---
 # ## Setup — Configuration
-#
-# All parameters for the study are consolidated here: the instrument and sample
-# period, the metric families to retrieve, and the two search dimensions. Edit this
-# cell and re-run; every downstream step reads from it.
 #
 # - **`rank_windows`** — look-back length for the rolling percentile-rank transform
 #   (longer windows produce slower, more stable signals).
@@ -289,19 +278,6 @@ def build_panel(
         col: feature_sources[col] for col in feature_cols if col in feature_sources
     }
     return panel, feature_cols, feature_sources
-
-
-def summarize_panel(panel_df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
-    return pd.DataFrame(
-        [
-            {
-                "feature": feature,
-                "non_null_pct": float(panel_df[feature].notna().mean() * 100.0),
-                "std": float(panel_df[feature].std()),
-            }
-            for feature in feature_cols[:10]
-        ]
-    )
 
 
 def make_rank_signal(panel_df: pd.DataFrame, feature: str, window: int) -> np.ndarray:
@@ -606,21 +582,15 @@ def build_decile_summary(
 #
 # `build_panel` retrieves close price together with every numeric column from the
 # configured metric families, forward-fills sparse series, and constructs the
-# prediction target — the one-bar-ahead return (`fwd_ret`). We inspect the panel's
-# dimensions, a sample of rows, and per-feature coverage before building anything on
-# top of it.
+# prediction target — the one-bar-ahead return (`fwd_ret`).
 
 # %%
 panel, feature_cols, feature_sources = build_panel(config)
-panel_summary = summarize_panel(panel, feature_cols)
 
 print(f"Rows: {len(panel):,}")
 print(f"Feature count: {len(feature_cols)}")
 print(f"First features: {feature_cols[:12]}")
 print(panel[["time", "close", "fwd_ret"]].head().to_markdown(index=False))
-
-print("\nFeature coverage snapshot:")
-print(panel_summary.to_markdown(index=False))
 
 # %% [markdown]
 # ---
@@ -637,6 +607,9 @@ print(panel_summary.to_markdown(index=False))
 #    the ranked signal trades responsiveness for stability; `None` leaves it
 #    unsmoothed.
 #
+# When smoothing helps, the interpretation is usually simple: for the
+# high-frequency alpha to survive transaction costs, we need to slow it down.
+#
 # The position direction (long or short) is set by the sign of the in-sample
 # correlation between the signal and the one-bar-ahead return.
 #
@@ -647,28 +620,6 @@ print(panel_summary.to_markdown(index=False))
 # combinations.
 
 # %%
-window_pairs_per_feature = sum(
-    len(allowed_smooth_windows(config, rank_window))
-    for rank_window in config.rank_windows
-)
-full_grid_pairs = len(config.rank_windows) * len(config.smooth_windows)
-search_space = pd.DataFrame(
-    [
-        {
-            "features": len(feature_cols),
-            "rank_windows": len(config.rank_windows),
-            "smooth_windows": len(config.smooth_windows),
-            "window_pairs_per_feature": window_pairs_per_feature,
-            "full_grid_pairs_per_feature": full_grid_pairs,
-            "reduction_vs_full_grid_pct": (
-                100.0 * (1.0 - window_pairs_per_feature / full_grid_pairs)
-            ),
-            "total_combinations": len(feature_cols) * window_pairs_per_feature,
-        }
-    ]
-)
-print(search_space.to_markdown(index=False))
-
 # %% [markdown]
 # ---
 # ## Step 3 — Search the parameter grid
@@ -694,11 +645,11 @@ diverse_top_strategies = summarize_diverse_top_strategies(
     results_df, feature_sources, TOP_STRATEGY_COUNT
 )
 
-print("Top strategies by Sharpe:")
-print(top_strategies.to_markdown(index=False))
-
 print("\nTop strategies by Sharpe, one per metric family:")
 print(diverse_top_strategies.to_markdown(index=False))
+
+print("Top strategies by Sharpe:")
+print(top_strategies.to_markdown(index=False))
 
 # %% [markdown]
 # ---
@@ -732,10 +683,6 @@ for _, row in diverse_plot_rows.iterrows():
 # ---
 # ## Step 5 — Examine the best candidate
 #
-# We isolate the highest-ranked candidate and inspect the full composite strategy
-# view. The bottom row adds two diagnostics directly into the same output:
-# mean forward returns by decile and a robustness heatmap across window choices.
-
 # %%
 best = results_df.iloc[0]
 best_signal, best_mask = plot_strategy_overview(
@@ -768,33 +715,15 @@ best_summary = pd.DataFrame(
 )
 print(best_summary.to_markdown(index=False))
 
-# %%
-top_feature_summary = (
-    results_df.groupby("feature", as_index=False)["sharpe"]
-    .max()
-    .sort_values("sharpe", ascending=False)
-    .head(10)
-)
-print("Top features by best Sharpe:")
-print(top_feature_summary.to_markdown(index=False))
-
 # %% [markdown]
 # ---
 # ## Recap
 #
-# This notebook executed the complete workflow:
+# The exercise is using the preview data available, which is a single month in
+# 2025, and naturally it's easy to find a strategy that worked well for a short
+# period, especially when trying a hundred potential candidates, in sample.
 #
-# - **Loaded** price and microstructure features and constructed a one-bar-ahead
-#   return target.
-# - **Constructed** scale-free ranked signals, with optional smoothing.
-# - **Searched** a horizon-aligned feature × window schedule, scoring every tested
-#   candidate on a cost-aware backtest.
-# - **Validated** the leading candidates via equity curve, decile monotonicity, and
-#   parameter-robustness diagnostics.
-#
-# Note that smoothing constitutes a second search dimension: a feature can rank
-# highly either because its raw ranked signal is predictive or because a slower
-# variant is cleaner.
+# Try out the subscriptions to get access to 4 years of historical data!
 
 # %% [markdown]
 # ---
@@ -812,95 +741,17 @@ print(top_feature_summary.to_markdown(index=False))
 # `PREVIEW = False` with a full API key) to validate out-of-sample.
 
 # %%
-best_feature = str(best["feature"])
-best_metric, best_kind = feature_sources.get(best_feature, (best_feature, "regular"))
-best_rank = int(best["rank_window"])
-best_smooth = (
-    None
-    if best["smooth_window"] is None or pd.isna(best["smooth_window"])
-    else int(best["smooth_window"])
-)
-fetch_fn = "get_derivative_metrics" if best_kind == "derivative" else "get_metrics"
-
-snippet = f'''# Standalone reproduction of the selected configuration.
-# Dependencies: aperiodic, numpy, pandas.
-import datetime
-
-import numpy as np
-import pandas as pd
-from aperiodic import get_ohlcv, {fetch_fn}
-
-API_KEY = "YOUR_KEY"
-SYMBOL, EXCHANGE = "{config.symbol}", "{config.exchange}"
-INTERVAL, TIMESTAMP = "{config.interval}", "{config.timestamp}"
-START = datetime.date.fromisoformat("{config.start_date.isoformat()}")
-END = datetime.date.fromisoformat("{config.end_date.isoformat()}")
-PREVIEW = True  # set False with a full API key (and shift START/END) for out-of-sample
-
-FEATURE = "{best_feature}"          # selected feature column
-METRIC = "{best_metric}"            # its source metric family
-RANK_WINDOW = {best_rank}
-SMOOTH_WINDOW = {best_smooth}        # None disables smoothing
-DIRECTION = {int(best["direction"])}            # +1 long, -1 short
-COST_BPS = {config.cost_bps}
-
-# 1. Retrieve close price and the source metric, de-duplicate, and align on time.
-price = get_ohlcv(api_key=API_KEY, symbol=SYMBOL, exchange=EXCHANGE, interval=INTERVAL,
-                  timestamp=TIMESTAMP, start_date=START, end_date=END,
-                  output="pandas", preview=PREVIEW)
-price = price.to_pandas() if hasattr(price, "to_pandas") else pd.DataFrame(price)
-price = price.sort_values("time")[["time", "close"]]
-
-metric = {fetch_fn}(api_key=API_KEY, metric=METRIC, symbol=SYMBOL, exchange=EXCHANGE,
-                  interval=INTERVAL, timestamp=TIMESTAMP, start_date=START, end_date=END,
-                  output="pandas", preview=PREVIEW)
-metric = metric.to_pandas() if hasattr(metric, "to_pandas") else pd.DataFrame(metric)
-metric = metric.sort_values("time").drop_duplicates(subset=["time"], keep="last")
-
-panel = price.merge(metric[["time", FEATURE]], on="time", how="left").sort_values("time")
-panel[FEATURE] = panel[FEATURE].ffill()
-panel["fwd_ret"] = panel["close"].pct_change().shift(-1)
-panel = panel.dropna(subset=["fwd_ret"])
-
-# 2. Rebuild the ranked (and optionally smoothed) signal, then form the position.
-rolling_rank = panel[FEATURE].rolling(RANK_WINDOW, min_periods=10).rank(method="average")
-effective_window = panel[FEATURE].rolling(RANK_WINDOW, min_periods=10).count()
-signal = ((rolling_rank - 1.0) / (effective_window - 1.0)) * 2.0 - 1.0
-if SMOOTH_WINDOW:
-    signal = signal.rolling(SMOOTH_WINDOW).mean()
-position = (signal * DIRECTION).clip(-1.0, 1.0)
-
-# 3. Transaction-cost-aware position backtest.
-fwd_ret = panel["fwd_ret"].to_numpy()
-pos = position.to_numpy()
-valid = np.isfinite(pos) & np.isfinite(fwd_ret)
-pos, fwd_ret = pos[valid], fwd_ret[valid]
-turnover = np.abs(np.diff(pos, prepend=0.0))
-net = pos * fwd_ret - turnover * COST_BPS / 1e4
-equity = np.cumprod(1.0 + net)
-
-bars_per_year = 288 * 365  # 5-minute bars
-std = net.std(ddof=1)
-sharpe = net.mean() / std * np.sqrt(bars_per_year) if std > 0 else 0.0
-net_return_pct = (equity[-1] / equity[0] - 1.0) * 100.0
-running_max = np.maximum.accumulate(equity)
-max_drawdown_pct = ((equity - running_max) / running_max).min() * 100.0
-
-print("feature =", FEATURE, "| rank =", RANK_WINDOW, "| smooth =", SMOOTH_WINDOW,
-      "| direction =", DIRECTION)
-print("annualized_sharpe = %.3f | net_return_pct = %.3f | max_drawdown_pct = %.3f"
-      % (sharpe, net_return_pct, max_drawdown_pct))
-'''
-
-display(
-    Markdown(
-        "#### Standalone snippet — reproduce this configuration\n\n"
-        "```python\n" + snippet + "\n```"
-    )
-)
-
-print(
-    "Selected configuration ·",
-    f"feature={best_feature} · metric={best_metric} · rank={best_rank} · "
-    f"smooth={best_smooth} · direction={'long' if int(best['direction']) == 1 else 'short'}",
-)
+# %% [markdown]
+# ---
+# ## Follow-ups
+#
+# The next improvements to pursue are straightforward:
+#
+# - **Out-of-sample validation or walk-forward testing.** Re-run the selected
+#   configuration on later periods, or use a rolling train/test schedule, to check
+#   whether the edge survives beyond the in-sample window.
+# - **Using the full history.** Expand the sample beyond the current preview slice
+#   so the search covers multiple market regimes rather than one month of behavior.
+# - **Signal ensembling.** The most obvious model improvement is to combine several
+#   strong signals into an ensemble, for example by averaging normalized signal
+#   values across complementary features instead of relying on one series alone.
