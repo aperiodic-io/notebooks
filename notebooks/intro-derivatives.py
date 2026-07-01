@@ -1,6 +1,10 @@
 # ---
 # jupyter:
+#   aperiodic:
+#     uses_preview_data: true
 #   jupytext:
+#     cell_metadata_json: true
+#     notebook_metadata_filter: aperiodic
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -11,6 +15,8 @@
 #     language: python
 #     name: python3
 # ---
+
+# aperiodic: uses_preview_data
 
 # %% [markdown]
 # # Intro to Aperiodic Derivatives Metrics
