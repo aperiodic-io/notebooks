@@ -28,7 +28,9 @@
 # - has a reasonable distribution, ideally close to uniform
 # - is slow enough to survive transaction costs
 #
-# The notebook runs end to end on preview data (single month - May 2025).
+# With no API key it runs end to end on preview data (single month - May 2025).
+# Supply your own key (below or via `APERIODIC_API_KEY`) to query your
+# subscription's full download window — just widen the `start_date`/`end_date`.
 #
 # ```text
 # +------------------+     +--------------+     +-----------------------------+
@@ -63,15 +65,22 @@ from IPython.display import Markdown, display
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
     API_KEY = os.getenv("APERIODIC_API_KEY", "...")
-if API_KEY == "...":
-    raise RuntimeError("Set APERIODIC_API_KEY in the environment or in .env.")
+
+# Without a key the notebook runs on the free preview slice (single month): with
+# preview=True the client falls back to the shared demo key and the preview
+# endpoint. Provide a key (above or via APERIODIC_API_KEY) to use the standard
+# endpoint and query your subscription's full download window — just widen the
+# start_date / end_date below.
+HAS_API_KEY = API_KEY != "..."
+API_KEY = API_KEY if HAS_API_KEY else None
 
 
 @dataclass(frozen=True)
 class AlphaDiscoveryConfig:
     """All parameters for the alpha-discovery notebook in one place."""
 
-    api_key: str
+    api_key: str | None
+    preview: bool
     symbol: str
     exchange: str
     interval: str
@@ -87,6 +96,7 @@ class AlphaDiscoveryConfig:
 
 config = AlphaDiscoveryConfig(
     api_key=API_KEY,
+    preview=not HAS_API_KEY,
     symbol="perpetual-BTC-USDT:USDT",
     exchange="binance-futures",
     interval="5m",
@@ -197,7 +207,7 @@ def get_numeric_metric_frame(
         end_date=config.end_date,
         output="pandas",
         show_progress=True,
-        preview=True,
+        preview=config.preview,
     )
 
     frame = (
@@ -235,7 +245,7 @@ def build_panel(
         end_date=config.end_date,
         output="pandas",
         show_progress=True,
-        preview=True,
+        preview=config.preview,
     )
 
     panel = (
