@@ -68,10 +68,6 @@ if API_KEY == "...":
 if API_KEY == "...":
     API_KEY = "DEMO-KEY"
 
-# Without a key the notebook runs on the free preview slice (single month): only
-# the shared "DEMO-KEY" runs against the preview endpoint. Provide a key (above
-# or via APERIODIC_API_KEY) to use the standard endpoint and query your
-# subscription's full download window — just widen the start_date / end_date below.
 USE_PREVIEW = API_KEY == "DEMO-KEY"
 
 
