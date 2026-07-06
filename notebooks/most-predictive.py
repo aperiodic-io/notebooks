@@ -109,14 +109,14 @@ COST_BPS = 0.0
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
     API_KEY = os.getenv("APERIODIC_API_KEY", "...")
+if API_KEY == "...":
+    API_KEY = "DEMO-KEY"
 
-# Without a key the notebook runs on the free preview slice: with preview=True the
-# client falls back to the shared demo key and the preview endpoint. Provide a key
-# (above or via APERIODIC_API_KEY) to use the standard endpoint and query your
-# subscription's full download window — just widen the dates above.
-HAS_API_KEY = API_KEY != "..."
-API_KEY = API_KEY if HAS_API_KEY else None
-USE_PREVIEW = not HAS_API_KEY
+# Without a key the notebook runs on the free preview slice: only the shared
+# "DEMO-KEY" runs against the preview endpoint. Provide a key (above or via
+# APERIODIC_API_KEY) to use the standard endpoint and query your subscription's
+# full download window — just widen the dates above.
+USE_PREVIEW = API_KEY == "DEMO-KEY"
 
 
 def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:
