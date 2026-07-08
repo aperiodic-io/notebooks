@@ -8052,6 +8052,12 @@ a.anchor-link {
     color: var(--ap-text);
     background: var(--ap-bg-muted);
     border: 1px solid var(--ap-border);
+    /* Indent past the collapser + "In [N]:" prompt gutters so the pill lines up
+       with the cell content column (headings, body text, code all start here). */
+    margin-left: calc(
+      var(--jp-cell-collapser-width) + var(--jp-cell-prompt-width) + 2 *
+        var(--jp-code-padding)
+    );
     transition:
       background 0.15s ease,
       border-color 0.15s ease,
