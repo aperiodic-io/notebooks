@@ -238,6 +238,68 @@
   .jp-NotebookPanel-toolbar {
     display: none !important;
   }
+
+  /* ── Collapsible source cells (metadata.jupyter.source_hidden) ─── */
+  details.ap-collapsible-code {
+    margin: 0.25rem 0 0.5rem;
+  }
+  .ap-collapsible-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    width: fit-content;
+    cursor: pointer;
+    user-select: none;
+    list-style: none; /* Firefox + standard: drop the default ▸ marker */
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-family: 'Mona Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--ap-text);
+    background: var(--ap-bg-muted);
+    border: 1px solid var(--ap-border);
+    /* Indent past the collapser + "In [N]:" prompt gutters so the pill lines up
+       with the cell content column (headings, body text, code all start here). */
+    margin-left: calc(
+      var(--jp-cell-collapser-width) + var(--jp-cell-prompt-width) + 2 *
+        var(--jp-code-padding)
+    );
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+  .ap-collapsible-summary::-webkit-details-marker {
+    display: none; /* old WebKit/Safari */
+  }
+  /* Caret drawn from borders so we don't depend on a glyph font */
+  .ap-collapsible-summary::before {
+    content: '';
+    width: 0.5em;
+    height: 0.5em;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg); /* ▸ pointing right when closed */
+    transition: transform 0.15s ease;
+    opacity: 0.7;
+  }
+  details.ap-collapsible-code[open] > .ap-collapsible-summary::before {
+    transform: rotate(45deg); /* ▾ pointing down when open */
+  }
+  .ap-collapsible-summary:hover {
+    background: var(--ap-bg-alt);
+    border-color: var(--ap-text);
+    color: var(--ap-text-heading);
+  }
+  details.ap-collapsible-code[open] > .ap-collapsible-summary {
+    margin-bottom: 0.25rem;
+  }
+  html.dark .ap-collapsible-summary:hover {
+    border-color: #5a9fd4;
+    color: var(--ap-text-heading);
+  }
 </style>
 <script>
   (function() {
@@ -266,3 +328,19 @@
   })();
 </script>
 {%- endblock header -%}
+
+{#- Collapse code cells the author flagged with metadata.jupyter.source_hidden
+    into a native <details> so long "helper" sections start collapsed but stay
+    expandable. Only the input is wrapped — output_group is a sibling block, so
+    any cell outputs remain visible. -#}
+{%- block input_group -%}
+{%- if cell.metadata.get('jupyter', {}).get('source_hidden', false) -%}
+{%- set _src = cell.source if cell.source is string else cell.source | join('') -%}
+<details class="ap-collapsible-code">
+<summary class="ap-collapsible-summary">Show helper code · {{ _src.split('\n') | length }} lines</summary>
+{{ super() }}
+</details>
+{%- else -%}
+{{ super() }}
+{%- endif -%}
+{%- endblock input_group -%}
