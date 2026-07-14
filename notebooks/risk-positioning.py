@@ -41,7 +41,7 @@
 # - Binance Academy, funding rates: https://www.binance.com/en/academy/articles/what-are-funding-rates-in-crypto-markets
 
 # %% [markdown]
-# ## 1. Crowded leverage builds before it unwinds
+# ## 1. The crowding hypothesis
 #
 # Aperiodic's derivatives metrics describe positioning from three angles:
 #
@@ -52,10 +52,13 @@
 # - **Open interest** shows how much leverage is outstanding, and whether it is
 #   building or unwinding.
 #
-# No single series is decisive. Agreement across all three — financing, dislocation,
-# and outstanding leverage all stretched the same way — is more informative than any
-# one on its own, because that is when a crowded trade is most vulnerable to a
-# sharp unwind.
+# The **hypothesis** is that agreement across all three — financing, dislocation, and
+# outstanding leverage all stretched the same way — marks a crowded trade that is more
+# vulnerable to a sharp unwind. That is a claim about **conditional tails across many
+# regimes**, which a single month cannot confirm or refute. What this notebook *can*
+# do honestly is build the score transparently (trailing, look-ahead-free,
+# sign-preserving) and report what actually followed high readings in May 2025 —
+# including when the data disagrees with the hypothesis.
 
 # %%
 from __future__ import annotations
@@ -168,29 +171,33 @@ def audit_columns(frames: dict[str, tuple[pd.DataFrame, list[str]]]) -> None:
 
 def rolling_rank(series: pd.Series, window: int) -> pd.Series:
     """Trailing rolling percentile rank in [0, 1] (alpha-discovery transform).
-    Uses only data up to and including the current bar — no look-ahead."""
-    ranks = series.rolling(window, min_periods=10).rank(method="average")
-    counts = series.rolling(window, min_periods=10).count()
+    Uses only data up to and including the current bar — no look-ahead. Requires a
+    quarter-window of history so day-one "7-day" ranks are not seeded off a handful
+    of observations."""
+    min_periods = max(10, window // 4)
+    ranks = series.rolling(window, min_periods=min_periods).rank(method="average")
+    counts = series.rolling(window, min_periods=min_periods).count()
     return (ranks - 1.0) / (counts - 1.0)
 
 
 def forward_return(close: pd.Series, horizon: int) -> pd.Series:
-    """Return from bar t to bar t+horizon."""
+    """Return over the future window (t, t+horizon]."""
     return close.pct_change(horizon).shift(-horizon)
 
 
 def forward_vol(ret: pd.Series, horizon: int) -> pd.Series:
-    """Std of per-bar returns over the next `horizon` bars (reverse-rolling)."""
-    rev = ret[::-1]
-    fv = rev.rolling(horizon, min_periods=max(2, horizon // 4)).std()
-    return fv[::-1]
+    """Std of per-bar returns over the strictly-future bars t+1 .. t+horizon.
+    `rolling(h)` at index t+h spans [t+1, t+h]; `shift(-h)` re-anchors it to t, so
+    the contemporaneous bar `ret[t]` (known at score time) is excluded."""
+    return ret.rolling(horizon, min_periods=max(2, horizon // 4)).std().shift(-horizon)
 
 
 def forward_max_drawdown(close: pd.Series, horizon: int) -> pd.Series:
-    """Most negative close-to-min return over the next `horizon` bars (<= 0)."""
-    rev = close[::-1]
-    fwd_min = rev.rolling(horizon, min_periods=1).min()[::-1]
-    return fwd_min / close - 1.0
+    """Most negative move from close[t] to the lowest close in t+1 .. t+horizon
+    (clipped at 0). The current bar is excluded, so `.clip(upper=0)` — not a trivial
+    self-observation — is what enforces the '<= 0' semantics."""
+    fwd_min = close.rolling(horizon, min_periods=1).min().shift(-horizon)
+    return (fwd_min / close - 1.0).clip(upper=0.0)
 
 
 # %% [markdown]
@@ -313,7 +320,7 @@ format_time_axis(axes[3])
 plt.tight_layout()
 
 # %% [markdown]
-# ## 5. Build the crowding score
+# ## 4. Build the crowding score
 #
 # Each component is mapped to a trailing rolling percentile rank over `RANK_WINDOW`
 # bars (7 days), so a value near **1** means "unusually stretched *long*" and near
@@ -321,18 +328,32 @@ plt.tight_layout()
 #
 # - `funding_rate` — higher rank = longs paying more.
 # - `basis_bps` — higher rank = richer futures premium.
-# - `open_interest_pct_change` — higher rank = leverage building fastest.
+# - **1-day** open-interest change — higher rank = leverage building fastest. We
+#   rank the trailing 1-day OI change (`open_interest.pct_change(288)`), **not** the
+#   raw 5-minute change: at 5-minute frequency the OI change is ~white noise whose
+#   rank oscillates around 0.5, which would only dilute the composite. Section 1's
+#   "leverage building or unwinding" is an hours-to-days concept, so we measure it
+#   over a day.
 #
 # The composite is the **simple mean** of the three ranks (a transparent,
 # fixed-weight combination). Because ranks preserve direction, the composite sits
 # in [0, 1] with **> 0.5 = long crowding, < 0.5 = short crowding** — the sign is
 # kept, not collapsed to magnitude. Ranks and the composite use trailing data only.
+#
+# Note that funding and basis both price the perp-vs-index premium, so they are
+# correlated by construction; we print their rank correlations so the composite is
+# not read as three independent inputs.
 
 # %%
+df["oi_change_1d"] = df["open_interest"].pct_change(288)  # 1-day leverage build
 df["rank_funding"] = rolling_rank(df["funding_rate"], RANK_WINDOW)
 df["rank_basis"] = rolling_rank(df["basis_bps"], RANK_WINDOW)
-df["rank_oi_change"] = rolling_rank(df["open_interest_pct_change"], RANK_WINDOW)
+df["rank_oi_change"] = rolling_rank(df["oi_change_1d"], RANK_WINDOW)
 df["crowding_score"] = df[["rank_funding", "rank_basis", "rank_oi_change"]].mean(axis=1)
+
+rank_cols = ["rank_funding", "rank_basis", "rank_oi_change"]
+print("Rank correlation between components (funding & basis both price the premium):")
+print(df[rank_cols].dropna().corr().round(2).to_markdown())
 
 # Forward outcomes for the event study (future prices used only for the outcome).
 for h in FORWARD_HORIZONS:
@@ -368,13 +389,18 @@ plt.tight_layout()
 
 # %%
 event = df.dropna(subset=["crowding_score"]).copy()
-event["score_decile"] = pd.qcut(event["crowding_score"], 10, labels=list(range(1, 11)), duplicates="drop")
+# labels=False + 1 avoids a ValueError if qcut ever drops a bin (lower-variance
+# symbols/windows); it yields integer deciles 1..k.
+event["score_decile"] = pd.qcut(event["crowding_score"], 10, labels=False, duplicates="drop") + 1
 
 ret_by_decile = event.groupby("score_decile", observed=True)[[f"fwd_ret_{h}" for h in FORWARD_HORIZONS]].mean() * 100
 vol_by_decile = event.groupby("score_decile", observed=True)[[f"fwd_vol_{h}" for h in FORWARD_HORIZONS]].mean() * 1e4
-counts = event.groupby("score_decile", observed=True)["crowding_score"].count()
+# Count valid observations per decile at the longest horizon (tail bars have NaN
+# forward outcomes and drop from the means, so this is the honest denominator).
+h_long = FORWARD_HORIZONS[-1]
+counts = event.dropna(subset=[f"fwd_ret_{h_long}"]).groupby("score_decile", observed=True)["crowding_score"].count()
 
-print("Sample count per decile:")
+print(f"Valid observations per decile at the {horizon_label(h_long)} horizon:")
 print(counts.to_markdown())
 
 fig, (ax_r, ax_v) = plt.subplots(1, 2, figsize=(16, 6))
@@ -400,15 +426,23 @@ plt.tight_layout()
 # %% [markdown]
 # ## Chart 3 — Sharpest in-window moves
 #
-# The largest adverse forward moves at the 1-day horizon, annotated with the
-# crowding score **known immediately before** each move (a trailing input). This
-# asks whether the score was already elevated ahead of the sharpest unwinds — for
-# this window only.
+# The largest **distinct** adverse forward moves at the 1-day horizon, annotated
+# with the crowding score **known immediately before** each move (a trailing input).
+# Because overlapping 1-day windows onto a single drop would otherwise show up as
+# several "events", we de-cluster greedily: keep the worst bar, then skip anything
+# within one horizon of an already-selected event. The question is whether the score
+# was already elevated ahead of these unwinds — for this window only.
 
 # %%
 h_long = FORWARD_HORIZONS[-1]
-moves = df.dropna(subset=[f"fwd_ret_{h_long}", "crowding_score"]).copy()
-sharp = moves.nsmallest(6, f"fwd_ret_{h_long}")
+moves = df.dropna(subset=[f"fwd_ret_{h_long}", "crowding_score"]).sort_values(f"fwd_ret_{h_long}").copy()
+selected: list[pd.Series] = []
+for _, r in moves.iterrows():
+    if all(abs((r["time"] - s["time"]).total_seconds()) > h_long * 300 for s in selected):
+        selected.append(r)
+    if len(selected) == 6:
+        break
+sharp = pd.DataFrame(selected)
 
 fig, ax = plt.subplots(figsize=(14, 6))
 ax.plot(df["time"], df["close"], color="#2563eb", linewidth=1.1)
@@ -433,25 +467,31 @@ print(
     .assign(**{f"fwd_ret_{h_long}": lambda d: d[f"fwd_ret_{h_long}"] * 100, f"fwd_maxdd_{h_long}": lambda d: d[f"fwd_maxdd_{h_long}"] * 100})
     .to_markdown(index=False)
 )
+print(
+    f"\nCrowding score just before these drops ranged {sharp['crowding_score'].min():.2f}–"
+    f"{sharp['crowding_score'].max():.2f} (mean {sharp['crowding_score'].mean():.2f}). In this "
+    "window the score was near-neutral ahead of the sharpest unwinds — i.e. it did not flag "
+    "them in advance, consistent with the threshold table below."
+)
 
 # %% [markdown]
-# ## 8. Threshold calibration table
+# ## 5. Threshold calibration table
 #
-# For a small, pre-declared set of crowding-score thresholds, we report the
+# For a small, pre-declared set of crowding-score thresholds — **plus an
+# unconditional baseline** (all bars) so the comparison is explicit — we report the
 # observation count, subsequent return, realised volatility, and maximum subsequent
-# drawdown at the 1-day horizon. This is **in-window calibration** — a description
-# of what happened in May 2025 above each threshold — not a production threshold or
-# an out-of-sample validation.
+# drawdown at the 1-day horizon. This is **in-window calibration**: a description of
+# what happened in May 2025, not a production threshold or an out-of-sample test.
 
 # %%
 h = FORWARD_HORIZONS[-1]
 cal = df.dropna(subset=["crowding_score", f"fwd_ret_{h}", f"fwd_vol_{h}", f"fwd_maxdd_{h}"])
 rows = []
-for thr in SCORE_THRESHOLDS:
+for thr in [0.0, *SCORE_THRESHOLDS]:
     sub = cal[cal["crowding_score"] >= thr]
     rows.append(
         {
-            "score >= ": thr,
+            "score >= ": "all (baseline)" if thr == 0.0 else f"{thr:.1f}",
             "count": int(len(sub)),
             "share_of_sample_%": 100.0 * len(sub) / len(cal) if len(cal) else np.nan,
             f"mean_fwd_ret_{horizon_label(h)}_%": sub[f"fwd_ret_{h}"].mean() * 100,
@@ -464,18 +504,34 @@ print(f"In-window calibration at the {horizon_label(h)} horizon (illustrative):"
 print(calibration_table.to_markdown(index=False))
 
 # %% [markdown]
+# **What the table says — read straight.** In May 2025, elevated crowding preceded
+# **above-baseline** forward returns and **unexceptional** drawdowns; only forward
+# volatility ticks up modestly with the score. In other words, this month the score
+# behaved as a momentum/carry-**confirmation** signal, not a fragility warning —
+# crowding often resolved by grinding higher. That is the opposite of a "crowded
+# leverage unwinds" story, and one month cannot establish the conditional-tail
+# behaviour that story is about. Reporting it straight is the point: a construction
+# that is transparent and look-ahead-free is worth showing even when the window's
+# realised outcome does not cooperate.
+
+# %% [markdown]
 # ## Takeaways
 #
-# - **Three angles, one score.** Funding, basis, and open-interest change agree only
-#   sometimes; the composite highlights when financing, dislocation, and leverage are
-#   stretched together — the state most exposed to a sharp unwind.
-# - **A diagnostic, not a forecast.** The decile event study and threshold table
-#   describe what followed high scores *in this window*; they are in-window
-#   calibration, and the overlapping forward windows are not independent samples.
+# - **What was demonstrated: a clean construction.** A transparent, fixed-weight,
+#   sign-preserving crowding score built from **trailing** ranks of funding, basis,
+#   and a 1-day OI change — no look-ahead, forward outcomes measured over exactly
+#   `t+1 .. t+h`.
+# - **What was *not* demonstrated: unwind risk.** In May 2025 elevated crowding
+#   preceded **above-baseline** returns and unexceptional drawdowns (Section 5) and
+#   the score was near-neutral ahead of the sharpest drop (Chart 3). This month the
+#   score behaved as momentum/carry-confirmation, not a fragility warning. The
+#   unwind hypothesis is about conditional tails across regimes, which one month
+#   cannot show.
 # - **Sign preserved.** The score keeps long-vs-short crowding (above/below 0.5)
 #   rather than collapsing to magnitude, so short-side crowding is visible too.
 # - **One month proves nothing.** Every conditional return, volatility, and drawdown
-#   here is illustrative; ongoing monitoring would need Live/Institutional data.
+#   here is illustrative; testing the hypothesis needs many regimes, which
+#   Live/Institutional history would provide.
 #
 # ## Further reading
 # - [Read positioning & risk](https://aperiodic.io/use-cases/positioning-and-risk)
