@@ -8921,8 +8921,8 @@ that measured slippage <em>implies</em> for reference.</p>
         <span class="s2">"Mean |modelled - measured| (bps)"</span><span class="p">:</span> <span class="n">calibration_error_bps</span><span class="p">,</span>
         <span class="s2">"Mean modelled cost (bps)"</span><span class="p">:</span> <span class="n">model_at_ref</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
         <span class="s2">"Mean measured slippage (bps)"</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s2">"slippage_bps_mean"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
-        <span class="s2">"Catalogue impact_coef (bps/USD)"</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s2">"impact_coef_bps_per_usd"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
-        <span class="s2">"Slippage-implied impact_coef (bps/USD)"</span><span class="p">:</span> <span class="n">implied_coef</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+        <span class="s2">"Catalogue impact_coef (bps per $1M)"</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s2">"impact_coef_bps_per_usd"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span>
+        <span class="s2">"Slippage-implied impact_coef (bps per $1M)"</span><span class="p">:</span> <span class="n">implied_coef</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span>
     <span class="p">}</span>
 <span class="p">)</span>
 <span class="n">calibration</span>
@@ -8950,12 +8950,12 @@ that measured slippage <em>implies</em> for reference.</p>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[10]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>Reference order notional (USD)           50,000.0000
-Mean |modelled - measured| (bps)              0.2963
-Mean modelled cost (bps)                      0.2141
-Mean measured slippage (bps)                  0.1948
-Catalogue impact_coef (bps/USD)               0.0000
-Slippage-implied impact_coef (bps/USD)        0.0000
+<pre>Reference order notional (USD)               50,000.0000
+Mean |modelled - measured| (bps)                  0.2963
+Mean modelled cost (bps)                          0.2141
+Mean measured slippage (bps)                      0.1948
+Catalogue impact_coef (bps per $1M)               4.1812
+Slippage-implied impact_coef (bps per $1M)        3.7953
 dtype: float64</pre>
 </div>
 </div>
