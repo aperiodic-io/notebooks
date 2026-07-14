@@ -481,8 +481,8 @@ calibration = pd.Series(
         "Mean |modelled - measured| (bps)": calibration_error_bps,
         "Mean modelled cost (bps)": model_at_ref.mean(),
         "Mean measured slippage (bps)": df["slippage_bps_mean"].mean(),
-        "Catalogue impact_coef (bps/USD)": df["impact_coef_bps_per_usd"].mean(),
-        "Slippage-implied impact_coef (bps/USD)": implied_coef.mean(),
+        "Catalogue impact_coef (bps per $1M)": df["impact_coef_bps_per_usd"].mean() * 1e6,
+        "Slippage-implied impact_coef (bps per $1M)": implied_coef.mean() * 1e6,
     }
 )
 calibration

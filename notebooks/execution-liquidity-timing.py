@@ -314,10 +314,11 @@ plt.tight_layout()
 # ## Chart 3 — Volatility and adverse flow
 #
 # Execution risk is not only about nominal depth. The left panel overlays rolling
-# realised volatility with the average spread by hour. The right panel relates a
-# **lagged** toxicity reading to the **next-bar** absolute move: bucketing by the
-# toxicity quintile *known before* the move, average subsequent moves rise with
-# toxicity. This is a toxicity-style diagnostic, not a causal claim.
+# realised volatility with the average spread by hour. The right panel relates two
+# **lagged** features — flow toxicity and the absolute L2 imbalance known *before*
+# the move — to the **next-bar** absolute move: bucketed into quintiles, average
+# subsequent moves rise with both. These are toxicity-style diagnostics, not causal
+# claims, and use only lagged inputs (no look-ahead).
 
 # %%
 fig, (ax_v, ax_t) = plt.subplots(1, 2, figsize=(16, 5.5))
@@ -334,13 +335,22 @@ ax_vs.tick_params(axis="y", labelcolor="#ea580c")
 ax_vs.grid(False)
 ax_v.set_title("Volatility and spread by hour move together")
 
-tox = df[["flow_toxicity_score", "fwd_abs_move_bps"]].dropna().copy()
-tox["tox_quintile"] = pd.qcut(tox["flow_toxicity_score"], 5, labels=[f"Q{i}" for i in range(1, 6)], duplicates="drop")
-by_q = tox.groupby("tox_quintile", observed=True)["fwd_abs_move_bps"].mean()
-ax_t.bar(by_q.index.astype(str), by_q.to_numpy(), color=sns.color_palette("flare", len(by_q)))
-ax_t.set_title("Next-bar absolute move by lagged toxicity quintile")
-ax_t.set_xlabel("Flow toxicity quintile (lagged)")
+labels = [f"Q{i}" for i in range(1, 6)]
+diag = df[["flow_toxicity_score", f"imbalance_{DEPTH_LEVEL}", "fwd_abs_move_bps"]].dropna().copy()
+diag["abs_imbalance"] = diag[f"imbalance_{DEPTH_LEVEL}"].abs()
+diag["tox_q"] = pd.qcut(diag["flow_toxicity_score"], 5, labels=labels, duplicates="drop")
+diag["imb_q"] = pd.qcut(diag["abs_imbalance"], 5, labels=labels, duplicates="drop")
+tox_adv = diag.groupby("tox_q", observed=True)["fwd_abs_move_bps"].mean().reindex(labels)
+imb_adv = diag.groupby("imb_q", observed=True)["fwd_abs_move_bps"].mean().reindex(labels)
+qx = np.arange(len(labels))
+bar_w = 0.4
+ax_t.bar(qx - bar_w / 2, tox_adv.to_numpy(), width=bar_w, color="#dc2626", label="by flow toxicity")
+ax_t.bar(qx + bar_w / 2, imb_adv.to_numpy(), width=bar_w, color="#7c3aed", label=f"by |L2 imbalance| (lvl {DEPTH_LEVEL})")
+ax_t.set_title("Next-bar absolute move by lagged-feature quintile")
+ax_t.set_xlabel("Feature quintile (Q1 low → Q5 high, lagged)")
 ax_t.set_ylabel("Mean next-bar move (bps)")
+ax_t.set_xticks(qx, labels)
+ax_t.legend(frameon=True, fontsize=10)
 plt.tight_layout()
 
 # %% [markdown]
@@ -348,9 +358,15 @@ plt.tight_layout()
 #
 # A transparent, equal-weight **liquidity score** combines four percentile-ranked
 # inputs so that *higher is better*: narrow spread, deep book, low impact, low
-# toxicity. Ranks are computed over the whole in-window sample (in-window
-# calibration), and hours are ranked by their mean score — a decision made from
-# historical bins, never from a row's own future.
+# toxicity (in-window ranks, so this is historical calibration, never a row's own
+# future). The score is a holistic quality read on each hour.
+#
+# The schedule itself targets what an execution desk actually minimises —
+# **expected cost**. We rank hours by the mean spread-plus-impact cost for a fixed
+# `ORDER_NOTIONAL` and compare the cheapest `BEST_K_HOURS`, a uniform all-day
+# schedule, and the most expensive `BEST_K_HOURS`. Because BTC's spread is tiny and
+# cost is impact-dominated, the cheapest hours are not always the highest-scoring
+# ones — exactly the divergence Chart 4 examines.
 
 # %%
 df["score_spread"] = 1.0 - pct_rank(df["spread_bps"])
@@ -359,13 +375,15 @@ df["score_impact"] = 1.0 - pct_rank(df["impact_coef_bps_per_usd"])
 df["score_toxicity"] = 1.0 - pct_rank(df["flow_toxicity_score"])
 df["liquidity_score"] = df[["score_spread", "score_depth", "score_impact", "score_toxicity"]].mean(axis=1)
 
+# Rank hours by expected execution cost (what the schedule minimises); the
+# liquidity score rides along as a holistic quality read for context and Chart 4.
 hourly_stats = (
     df.groupby("hour")
     .agg(liquidity_score=("liquidity_score", "mean"), expected_cost_bps=("expected_cost_bps", "mean"))
-    .sort_values("liquidity_score", ascending=False)
+    .sort_values("expected_cost_bps", ascending=True)
 )
-best_hours = hourly_stats.head(BEST_K_HOURS).index.tolist()
-worst_hours = hourly_stats.tail(BEST_K_HOURS).index.tolist()
+best_hours = hourly_stats.head(BEST_K_HOURS).index.tolist()  # cheapest to trade
+worst_hours = hourly_stats.tail(BEST_K_HOURS).index.tolist()  # most expensive to trade
 
 uniform_cost = df["expected_cost_bps"].mean()
 best_cost = df.loc[df["hour"].isin(best_hours), "expected_cost_bps"].mean()
@@ -401,11 +419,12 @@ plt.tight_layout()
 # %% [markdown]
 # ## Chart 4 — When to stand aside
 #
-# A single liquidity measure can mislead: some hours look deep but carry elevated
-# adverse-flow risk. The scatter places each hour by mean depth (x) against mean
-# toxicity (y); the best-schedule hours are green, worst are red. Watch the
-# **high-depth, high-toxicity** quadrant — nominal liquidity that can still fill
-# you adversely.
+# The cheapest hours by the cost model are not automatically the safest. The
+# scatter places each hour by mean depth (x) against mean toxicity (y); the
+# cheapest-to-trade hours are green, the most expensive red. Watch the
+# **high-toxicity** hours — even ample nominal depth can fill you adversely — which
+# is why the holistic liquidity score, not spread-plus-impact cost alone, matters
+# when deciding when to stand aside.
 
 # %%
 hour_scatter = df.groupby("hour").agg(
@@ -428,9 +447,11 @@ plt.tight_layout()
 # %% [markdown]
 # ## Takeaways
 #
-# - **When beats how, for moderate size.** In this window the best-hour schedule
-#   (`BEST_K_HOURS` = 4) costs meaningfully less than uniform, and the worst-hour
-#   schedule meaningfully more, for a fixed `ORDER_NOTIONAL` order (Section 7).
+# - **When beats how, for moderate size.** Ranked by the spread-plus-impact cost
+#   model, the cheapest `BEST_K_HOURS` = 4 hours come in below the uniform all-day
+#   cost and the most expensive hours above it, for a fixed `ORDER_NOTIONAL` order
+#   (Section 7). The gap is small in absolute bps for a market as liquid as BTC but
+#   grows with order size.
 # - **Cost scales with order size.** The impact term grows with notional, so the
 #   schedule gap widens for larger orders — re-run with your own `ORDER_NOTIONAL`.
 # - **Deep is not always safe.** Chart 4 shows hours with ample depth but elevated

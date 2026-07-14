@@ -153,12 +153,18 @@ def audit_columns(frames: dict[str, tuple[pd.DataFrame, list[str]]]) -> None:
         raise KeyError("; ".join(problems) + "\n" + report)
 
 
-def funding_print_mask(funding_rate: pd.Series) -> pd.Series:
-    """A funding print is a bar where the reported rate changes from the previous
-    bar. The API reports the applicable rate on every 5-minute bar (a step that
-    resets each settlement), so change-detection recovers the discrete prints
-    without inventing a new rate on every row. The first observation counts."""
-    fr = funding_rate
+def funding_settlement_mask(frame: pd.DataFrame) -> pd.Series:
+    """A funding print is a discrete settlement event. Binance USDT-margined
+    perpetuals settle every 8 hours (00:00, 08:00, 16:00 UTC), so we accrue the
+    reported rate at those bars only and never invent a funding rate on every
+    5-minute row — robust whether the API reports a step or a continuously
+    updating rate between settlements. If the standard schedule is absent (a
+    non-standard cadence), fall back to detecting a change in the reported rate."""
+    t = frame["time"]
+    scheduled = t.dt.hour.isin([0, 8, 16]) & (t.dt.minute == 0)
+    if int(scheduled.sum()) >= 3:
+        return scheduled
+    fr = frame["funding_rate"]
     return fr.notna() & fr.ne(fr.shift())
 
 
@@ -242,8 +248,11 @@ print("open_interest   :", sorted(map(str, open_interest.columns)))
 # at their native timestamps; identify discrete prints via change-detection.
 df = ohlcv[["time", "close"]].merge(funding[["time", "funding_rate"]], on="time", how="inner").sort_values("time")
 df = df.reset_index(drop=True)
-df["funding_rate_bps"] = df["funding_rate"] * 1e4
-df["is_print"] = funding_print_mask(df["funding_rate"])
+# Forward-fill the reported rate for display/accrual (handles sparse reporting);
+# never pull later values backwards.
+df["funding_rate_ff"] = df["funding_rate"].ffill()
+df["funding_rate_bps"] = df["funding_rate_ff"] * 1e4
+df["is_print"] = funding_settlement_mask(df)
 df["ret"] = df["close"].pct_change()
 
 # Optional context, only if the columns are present.
@@ -251,7 +260,7 @@ for ctx, col in [(basis, "basis_bps"), (open_interest, "open_interest")]:
     if col in ctx.columns:
         df = df.merge(ctx[["time", col]], on="time", how="left")
 
-prints = df.loc[df["is_print"], ["time", "funding_rate", "funding_rate_bps"]].reset_index(drop=True)
+prints = df.loc[df["is_print"], ["time", "funding_rate_ff", "funding_rate_bps"]].reset_index(drop=True)
 coverage = pd.Series(
     {
         "Rows (5m bars)": len(df),
@@ -259,7 +268,7 @@ coverage = pd.Series(
         "Start": df["time"].min(),
         "End": df["time"].max(),
         "Mean funding print (bps)": prints["funding_rate_bps"].mean(),
-        "Share of positive prints": (prints["funding_rate"] > 0).mean(),
+        "Share of positive prints": (prints["funding_rate_ff"] > 0).mean(),
         "Median basis (bps)": df["basis_bps"].median() if "basis_bps" in df else np.nan,
         "Median open interest": df["open_interest"].median() if "open_interest" in df else np.nan,
     }
@@ -302,7 +311,7 @@ plt.tight_layout()
 
 # %%
 prints = prints.copy()
-prints["cum_funding_unit_long"] = (-prints["funding_rate"]).cumsum()
+prints["cum_funding_unit_long"] = (-prints["funding_rate_ff"]).cumsum()
 prints["cum_funding_unit_long_pct"] = prints["cum_funding_unit_long"] * 100
 
 fig, ax = plt.subplots(figsize=(14, 6))
@@ -343,8 +352,8 @@ forward_return = bt["close"].pct_change().shift(-1)             # return from t 
 momentum = bt["ret"].rolling(MOMENTUM_LOOKBACK).mean()          # info up to bar t only
 position = np.sign(momentum).fillna(0.0).to_numpy()
 
-# Realised funding applied to the held position at print bars only.
-funding_leg = (bt["funding_rate"].to_numpy() * bt["is_print"].to_numpy().astype(float))
+# Realised funding applied to the held position at settlement bars only.
+funding_leg = bt["funding_rate_ff"].to_numpy() * bt["is_print"].to_numpy().astype(float)
 fret = forward_return.to_numpy()
 fret_with_funding = fret - funding_leg
 
@@ -394,7 +403,7 @@ print(summary_table.to_markdown(index=False))
 # look-ahead; between prints we forward-fill the latest observed rate.
 
 # %%
-funding_ff = bt["funding_rate"].ffill()
+funding_ff = bt["funding_rate_ff"]
 signal_pos = -np.sign(funding_ff).fillna(0.0).to_numpy()
 valid_s = np.isfinite(signal_pos) & np.isfinite(fret)
 frame_s, summ_s = run_position_backtest(
