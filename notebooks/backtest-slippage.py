@@ -334,12 +334,18 @@ df = (
 df["spread_bps"] = (df["ask_price"] - df["bid_price"]) / df["midprice"] * 1e4
 df["half_spread_bps"] = 0.5 * df["spread_bps"]
 
-# Impact coefficient, in bps per 1 USD of notional. Catalogue defines
-# impact_per_notional = |interval return| / |signed notional flow|, i.e. a price
-# FRACTION per USD; ×1e4 converts the fraction to basis points. It is non-negative
-# by construction (ratio of absolutes), so no abs() is needed; guard the rare
-# divide-by-near-zero-flow bar that yields inf.
+# Impact coefficient, in bps per 1 USD of notional. The Aperiodic trade-metrics
+# catalogue (https://aperiodic.io/metrics/trades) defines impact_per_notional =
+# |interval return| / |signed notional flow|, i.e. a price FRACTION per USD; ×1e4
+# converts the fraction to basis points. It is non-negative by construction (ratio
+# of absolutes), so no abs() is needed; guard the rare divide-by-near-zero-flow bar
+# that yields inf.
 df["impact_coef_bps_per_usd"] = df["impact_per_notional"].replace([np.inf, -np.inf], np.nan) * 1e4
+# Units tripwire: a negative coefficient would silently *credit* turnover in the
+# backtest and would mean the catalogue's sign/units convention changed.
+assert (df["impact_coef_bps_per_usd"].dropna() >= 0).all(), (
+    "impact_per_notional should be non-negative per the catalogue definition"
+)
 
 # Average executed trade notional (USD) = interval notional / number of taker
 # trades. Used to price the model's impact at the size measured slippage reflects.
@@ -450,7 +456,8 @@ plt.tight_layout()
 #
 # > `expected_cost_bps(order_notional) = half_spread_bps + impact_coef_bps_per_usd * order_notional`
 #
-# **What measured slippage is.** Per the catalogue, `slippage_bps_mean` is the
+# **What measured slippage is.** Per the Aperiodic [trade-metrics catalogue](https://aperiodic.io/metrics/trades),
+# `slippage_bps_mean` is the
 # average over the interval's trades of how far each fill landed *beyond the touch*
 # (buys above the best ask, sells below the best bid), in bps. So it is a
 # **per-trade, book-walk** cost that **excludes the half-spread**, dominated by the
@@ -520,6 +527,7 @@ calibration = pd.Series(
         "MAE |model impact - measured| (bps)": mae_bps,
         "Mean model impact @ avg trade (bps)": mean_model,
         "Mean measured slippage (bps)": mean_measured,
+        "Level miss (measured / model, x)": mean_measured / mean_model if mean_model else np.nan,
         "Catalogue impact_coef (bps per $1M)": mean_impact_coef * 1e6,
         "Notional where model mean = measured ($)": implied_match_notional,
     }
@@ -531,9 +539,11 @@ calibration
 # flow (`|return| / |net notional|`), while measured slippage is realised *per-trade*
 # book-walk; they are related impact measures but not the same quantity, so the
 # model is best treated as an **order-of-magnitude impact proxy**, not a calibrated
-# per-trade predictor. The scatter's correlation and MAE report how much genuine
-# per-bar tracking exists (typically weak — the MAE is on the order of the signal
-# itself). The "notional where model mean = measured" line shows that any apparent
+# per-trade predictor. Read the numbers straight: in this window the model
+# **under-predicts** measured per-trade slippage by roughly an **order of magnitude**
+# at the average trade size (the "level miss" ratio above) with **~zero per-bar
+# correlation** — the "order-of-magnitude proxy" label is meant literally, not as a
+# hedge. The "notional where model mean = measured" line shows that any apparent
 # agreement between a half-spread-inclusive $50k cost and measured slippage is a
 # coincidence of that chosen size, not evidence of calibration. A deployable model
 # would recalibrate the coefficient against measured slippage at its own order size.
