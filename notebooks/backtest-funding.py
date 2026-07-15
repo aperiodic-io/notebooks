@@ -284,7 +284,12 @@ coverage = pd.Series(
 )
 print(coverage.to_string())
 print(
-    "\nConvention: each settlement is charged the rate from the bar before it, applied to the "
+    "\nThe first in-window settlement (May 1, 00:00) has no pre-window bar, so its settled_rate "
+    "(funding_rate_ff.shift(1)) is NaN and it is dropped — the position holding into it was "
+    "established before the window, so there is nothing to charge; hence detected = expected − 1."
+)
+print(
+    "Convention: each settlement is charged the rate from the bar before it, applied to the "
     "position held into it. A definitive audit would reconcile 2–3 of these against Binance's "
     "published funding history (external to this catalogue)."
 )
