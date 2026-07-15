@@ -8579,12 +8579,18 @@ each frame to the analysis window and join on <code>time</code>.</p>
 <span class="n">df</span><span class="p">[</span><span class="s2">"spread_bps"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">"ask_price"</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s2">"bid_price"</span><span class="p">])</span> <span class="o">/</span> <span class="n">df</span><span class="p">[</span><span class="s2">"midprice"</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e4</span>
 <span class="n">df</span><span class="p">[</span><span class="s2">"half_spread_bps"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">df</span><span class="p">[</span><span class="s2">"spread_bps"</span><span class="p">]</span>
 
-<span class="c1"># Impact coefficient, in bps per 1 USD of notional. Catalogue defines</span>
-<span class="c1"># impact_per_notional = |interval return| / |signed notional flow|, i.e. a price</span>
-<span class="c1"># FRACTION per USD; ×1e4 converts the fraction to basis points. It is non-negative</span>
-<span class="c1"># by construction (ratio of absolutes), so no abs() is needed; guard the rare</span>
-<span class="c1"># divide-by-near-zero-flow bar that yields inf.</span>
+<span class="c1"># Impact coefficient, in bps per 1 USD of notional. The Aperiodic trade-metrics</span>
+<span class="c1"># catalogue (https://aperiodic.io/metrics/trades) defines impact_per_notional =</span>
+<span class="c1"># |interval return| / |signed notional flow|, i.e. a price FRACTION per USD; ×1e4</span>
+<span class="c1"># converts the fraction to basis points. It is non-negative by construction (ratio</span>
+<span class="c1"># of absolutes), so no abs() is needed; guard the rare divide-by-near-zero-flow bar</span>
+<span class="c1"># that yields inf.</span>
 <span class="n">df</span><span class="p">[</span><span class="s2">"impact_coef_bps_per_usd"</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">"impact_per_notional"</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e4</span>
+<span class="c1"># Units tripwire: a negative coefficient would silently *credit* turnover in the</span>
+<span class="c1"># backtest and would mean the catalogue's sign/units convention changed.</span>
+<span class="k">assert</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">"impact_coef_bps_per_usd"</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span> <span class="p">(</span>
+    <span class="s2">"impact_per_notional should be non-negative per the catalogue definition"</span>
+<span class="p">)</span>
 
 <span class="c1"># Average executed trade notional (USD) = interval notional / number of taker</span>
 <span class="c1"># trades. Used to price the model's impact at the size measured slippage reflects.</span>
@@ -8884,7 +8890,8 @@ multiplied by order notional:</p>
 <blockquote>
 <p><code>expected_cost_bps(order_notional) = half_spread_bps + impact_coef_bps_per_usd * order_notional</code></p>
 </blockquote>
-<p><strong>What measured slippage is.</strong> Per the catalogue, <code>slippage_bps_mean</code> is the
+<p><strong>What measured slippage is.</strong> Per the Aperiodic <a href="https://aperiodic.io/metrics/trades">trade-metrics catalogue</a>,
+<code>slippage_bps_mean</code> is the
 average over the interval's trades of how far each fill landed <em>beyond the touch</em>
 (buys above the best ask, sells below the best bid), in bps. So it is a
 <strong>per-trade, book-walk</strong> cost that <strong>excludes the half-spread</strong>, dominated by the
@@ -8963,6 +8970,7 @@ just the agreement of means.</p>
         <span class="s2">"MAE |model impact - measured| (bps)"</span><span class="p">:</span> <span class="n">mae_bps</span><span class="p">,</span>
         <span class="s2">"Mean model impact @ avg trade (bps)"</span><span class="p">:</span> <span class="n">mean_model</span><span class="p">,</span>
         <span class="s2">"Mean measured slippage (bps)"</span><span class="p">:</span> <span class="n">mean_measured</span><span class="p">,</span>
+        <span class="s2">"Level miss (measured / model, x)"</span><span class="p">:</span> <span class="n">mean_measured</span> <span class="o">/</span> <span class="n">mean_model</span> <span class="k">if</span> <span class="n">mean_model</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
         <span class="s2">"Catalogue impact_coef (bps per $1M)"</span><span class="p">:</span> <span class="n">mean_impact_coef</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span>
         <span class="s2">"Notional where model mean = measured ($)"</span><span class="p">:</span> <span class="n">implied_match_notional</span><span class="p">,</span>
     <span class="p">}</span>
@@ -8997,6 +9005,7 @@ Median avg trade notional ($): 5153.8
 MAE |model impact - measured| (bps)             0.1952
 Mean model impact @ avg trade (bps)             0.0199
 Mean measured slippage (bps)                    0.1948
+Level miss (measured / model, x)                9.7770
 Catalogue impact_coef (bps per $1M)             4.1812
 Notional where model mean = measured ($)   45,385.1607
 dtype: float64</pre>
@@ -9021,9 +9030,11 @@ dtype: float64</pre>
 flow (<code>|return| / |net notional|</code>), while measured slippage is realised <em>per-trade</em>
 book-walk; they are related impact measures but not the same quantity, so the
 model is best treated as an <strong>order-of-magnitude impact proxy</strong>, not a calibrated
-per-trade predictor. The scatter's correlation and MAE report how much genuine
-per-bar tracking exists (typically weak — the MAE is on the order of the signal
-itself). The "notional where model mean = measured" line shows that any apparent
+per-trade predictor. Read the numbers straight: in this window the model
+<strong>under-predicts</strong> measured per-trade slippage by roughly an <strong>order of magnitude</strong>
+at the average trade size (the "level miss" ratio above) with <strong>~zero per-bar
+correlation</strong> — the "order-of-magnitude proxy" label is meant literally, not as a
+hedge. The "notional where model mean = measured" line shows that any apparent
 agreement between a half-spread-inclusive $50k cost and measured slippage is a
 coincidence of that chosen size, not evidence of calibration. A deployable model
 would recalibrate the coefficient against measured slippage at its own order size.</p>
