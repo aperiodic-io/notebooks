@@ -8501,7 +8501,12 @@ settlement.</p>
 <span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">coverage</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
 <span class="nb">print</span><span class="p">(</span>
-    <span class="s2">"</span><span class="se">\n</span><span class="s2">Convention: each settlement is charged the rate from the bar before it, applied to the "</span>
+    <span class="s2">"</span><span class="se">\n</span><span class="s2">The first in-window settlement (May 1, 00:00) has no pre-window bar, so its settled_rate "</span>
+    <span class="s2">"(funding_rate_ff.shift(1)) is NaN and it is dropped — the position holding into it was "</span>
+    <span class="s2">"established before the window, so there is nothing to charge; hence detected = expected − 1."</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="s2">"Convention: each settlement is charged the rate from the bar before it, applied to the "</span>
     <span class="s2">"position held into it. A definitive audit would reconcile 2–3 of these against Binance's "</span>
     <span class="s2">"published funding history (external to this catalogue)."</span>
 <span class="p">)</span>
@@ -8524,6 +8529,7 @@ Median gap between settlements (h)       8.000000
 Mean settled funding (bps)               0.464864
 Share of positive settlements            0.902174
 
+The first in-window settlement (May 1, 00:00) has no pre-window bar, so its settled_rate (funding_rate_ff.shift(1)) is NaN and it is dropped — the position holding into it was established before the window, so there is nothing to charge; hence detected = expected − 1.
 Convention: each settlement is charged the rate from the bar before it, applied to the position held into it. A definitive audit would reconcile 2–3 of these against Binance's published funding history (external to this catalogue).
 </pre>
 </div>
