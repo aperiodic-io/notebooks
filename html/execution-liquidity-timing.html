@@ -8799,6 +8799,13 @@ half to the evaluation half, and does the model's hourly ranking agree with
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Model vs measured-slippage hourly ranking (Spearman)  : </span><span class="si">{</span><span class="n">slip_agreement</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"A gap that survives out-of-sample, positive persistence, and agreement with measured "</span>
       <span class="s2">"slippage would together be real evidence; weak values are the honest one-month verdict."</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="s2">"Read the eval MEDIAN column — the statistic we rank on: best "</span>
+    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">schedule</span><span class="p">[</span><span class="s1">'eval_median_bps'</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> vs worst </span><span class="si">{</span><span class="n">schedule</span><span class="p">[</span><span class="s1">'eval_median_bps'</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> bps "</span>
+    <span class="s2">"show no separation. The eval MEAN column may still order best &lt; worst, but that ordering is "</span>
+    <span class="s2">"produced by a handful of stressed bars (the heavy tail that motivated median ranking) and, with "</span>
+    <span class="sa">f</span><span class="s2">"persistence ≈ </span><span class="si">{</span><span class="n">rank_stability</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, must not be read as schedule skill."</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -8821,6 +8828,7 @@ half to the evaluation half, and does the model's hourly ranking agree with
 Hour-ranking persistence calibrate→evaluate (Spearman): -0.07
 Model vs measured-slippage hourly ranking (Spearman)  : 0.19
 A gap that survives out-of-sample, positive persistence, and agreement with measured slippage would together be real evidence; weak values are the honest one-month verdict.
+Read the eval MEDIAN column — the statistic we rank on: best 0.0426 vs worst 0.0415 bps show no separation. The eval MEAN column may still order best &lt; worst, but that ordering is produced by a handful of stressed bars (the heavy tail that motivated median ranking) and, with persistence ≈ -0.07, must not be read as schedule skill.
 </pre>
 </div>
 </div>
