@@ -452,6 +452,13 @@ print(f"\nHour-ranking persistence calibrate→evaluate (Spearman): {rank_stabil
 print(f"Model vs measured-slippage hourly ranking (Spearman)  : {slip_agreement:.2f}")
 print("A gap that survives out-of-sample, positive persistence, and agreement with measured "
       "slippage would together be real evidence; weak values are the honest one-month verdict.")
+print(
+    "Read the eval MEDIAN column — the statistic we rank on: best "
+    f"{schedule['eval_median_bps'].iloc[0]:.4f} vs worst {schedule['eval_median_bps'].iloc[2]:.4f} bps "
+    "show no separation. The eval MEAN column may still order best < worst, but that ordering is "
+    "produced by a handful of stressed bars (the heavy tail that motivated median ranking) and, with "
+    f"persistence ≈ {rank_stability:.2f}, must not be read as schedule skill."
+)
 
 # %%
 # Dispersion: hourly median cost (full month) with inter-quartile error bars, so the
