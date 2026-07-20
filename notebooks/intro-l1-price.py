@@ -70,7 +70,11 @@ API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
     API_KEY = os.getenv("APERIODIC_API_KEY", "...")
 if API_KEY == "...":
-    raise RuntimeError("Set APERIODIC_API_KEY in the environment or in .env.")
+    API_KEY = "DEMO-KEY"
+
+# Only the shared "DEMO-KEY" runs against the preview endpoint. Provide your own
+# key (above or via APERIODIC_API_KEY) to use the standard endpoint.
+USE_PREVIEW = API_KEY == "DEMO-KEY"
 
 
 def clip_window(df: pd.DataFrame) -> pd.DataFrame:
@@ -94,6 +98,7 @@ def format_time_axis(ax):
 price = clip_window(
     get_ohlcv(
         api_key=API_KEY,
+        preview=USE_PREVIEW,
         timestamp="true",
         interval=INTERVAL,
         exchange=EXCHANGE,
@@ -108,6 +113,7 @@ price = clip_window(
 l1 = clip_window(
     get_metrics(
         api_key=API_KEY,
+        preview=USE_PREVIEW,
         metric="l1_price",
         timestamp="true",
         interval=INTERVAL,

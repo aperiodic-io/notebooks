@@ -65,14 +65,10 @@ from IPython.display import Markdown, display
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
     API_KEY = os.getenv("APERIODIC_API_KEY", "...")
+if API_KEY == "...":
+    API_KEY = "DEMO-KEY"
 
-# Without a key the notebook runs on the free preview slice (single month): with
-# preview=True the client falls back to the shared demo key and the preview
-# endpoint. Provide a key (above or via APERIODIC_API_KEY) to use the standard
-# endpoint and query your subscription's full download window — just widen the
-# start_date / end_date below.
-HAS_API_KEY = API_KEY != "..."
-API_KEY = API_KEY if HAS_API_KEY else None
+USE_PREVIEW = API_KEY == "DEMO-KEY"
 
 
 @dataclass(frozen=True)
@@ -96,7 +92,7 @@ class AlphaDiscoveryConfig:
 
 config = AlphaDiscoveryConfig(
     api_key=API_KEY,
-    preview=not HAS_API_KEY,
+    preview=USE_PREVIEW,
     symbol="perpetual-BTC-USDT:USDT",
     exchange="binance-futures",
     interval="5m",
