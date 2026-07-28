@@ -72,6 +72,7 @@ python notebooks/getting-started.py
 | `execution-liquidity-timing` | Time-of-day execution scheduling around multi-level L2 liquidity and flow toxicity |
 | `backtest-funding` | Funding-aware perpetual backtest that isolates realised-funding PnL from price alpha |
 | `backtest-slippage` | Transaction-cost model from spread, impact, and measured slippage; how dynamic costs reshape a momentum backtest |
+| `timestamp-aggregation` | Ranks every metric by how much it shifts between exchange-reported and local-arrival timestamps (requires a full API key; not supported on `DEMO-KEY` preview) |
 
 ## Development
 
