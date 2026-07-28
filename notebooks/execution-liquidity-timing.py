@@ -25,9 +25,8 @@
 # order flow turns adverse together around stressed periods. For a
 # moderate-frequency order, *when* you execute can matter more than shaving
 # microseconds off the route. This notebook measures when liquidity is deep,
-# spreads are narrow, and flow is least toxic, then asks — with an out-of-sample
-# split, not a circular in-sample ranking — whether a time-of-day schedule actually
-# lowers modelled cost.
+# spreads are narrow, and flow is least toxic, then ranks the hours by modelled
+# execution cost and cross-checks that ranking against measured slippage.
 #
 # We study **Binance BTC perpetuals** (`perpetual-BTC-USDT:USDT`) at **5-minute**
 # resolution over **May 2025**, the window served by the shared `DEMO-KEY` preview
@@ -56,7 +55,7 @@
 #
 # This is an exercise in **historical scheduling** for moderate-frequency
 # execution — choosing better windows from recurring conditions — not low-latency
-# routing. Historical calibration still needs Live data to operate going forward.
+# routing. Historical analysis still needs Live data to operate going forward.
 
 # %%
 from __future__ import annotations
@@ -101,8 +100,6 @@ END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
 # hours each schedule selects.
 ORDER_NOTIONAL = 50_000
 BEST_K_HOURS = 4
-# Days used to CALIBRATE the schedule; the remainder is held out to EVALUATE it.
-CALIBRATION_DAYS = 15
 # Multi-depth L2 aggregation levels and the representative level for the heatmap.
 L2_LEVELS = [5, 10, 20, 25]
 DEPTH_LEVEL = 20
@@ -117,11 +114,9 @@ if API_KEY == "...":
 # key (above or via APERIODIC_API_KEY) to use the standard endpoint.
 USE_PREVIEW = API_KEY == "DEMO-KEY"
 
-SPLIT_TS = START_TS + pd.Timedelta(days=CALIBRATION_DAYS)
 print(f"Exchange / symbol : {EXCHANGE} / {SYMBOL}")
 print(f"Interval / window : {INTERVAL} | {START_DATE} → {END_DATE}")
 print(f"Order notional    : ${ORDER_NOTIONAL:,} | best/worst hours: {BEST_K_HOURS}")
-print(f"Calibrate < {SPLIT_TS.date()} ≤ evaluate")
 print(f"Mode              : {'preview (DEMO-KEY)' if USE_PREVIEW else 'standard endpoint'}")
 
 # %% [markdown]
@@ -283,7 +278,6 @@ df["ret"] = df["close"].pct_change()
 df["realized_vol_1h_bps"] = df["ret"].rolling(12).std() * np.sqrt(12) * 1e4
 df["fwd_abs_move_bps"] = df["close"].pct_change().shift(-1).abs() * 1e4  # lagged features only
 df["hour"] = df["time"].dt.hour
-df["sample"] = np.where(df["time"] < SPLIT_TS, "calibrate", "evaluate")
 
 # At $50k the cost is almost entirely the impact term (half-spread is ~0.005 bps on
 # BTC), so the schedule numbers depend chiefly on impact_per_notional's ×1e4 unit —
@@ -395,69 +389,58 @@ ax_t.legend(frameon=True, fontsize=10)
 plt.tight_layout()
 
 # %% [markdown]
-# ## 7. A schedule that is tested out-of-sample
+# ## 7. Ranking the hours by execution cost
 #
-# The tempting shortcut — pick the cheapest hours on the whole month and then report
-# those same hours' costs — is **circular**: `best ≤ uniform ≤ worst` is guaranteed
-# by construction. Instead we **calibrate** the ranking on the first
-# `CALIBRATION_DAYS` days and **evaluate** the fixed hour-sets on the held-out
-# remainder. Because the cost distribution is heavy-tailed (mean ≫ median, so a few
-# stressed bars dominate hour means), we rank on the **median** hourly cost. We then
-# ask two honest questions: does the hour ranking **persist** from the calibration
-# half to the evaluation half, and does the model's hourly ranking agree with
-# **measured** slippage?
+# We rank the hours by modelled execution cost for a fixed `ORDER_NOTIONAL` and
+# compare the cheapest `BEST_K_HOURS`, a uniform all-day schedule, and the priciest
+# `BEST_K_HOURS`. Because the cost distribution is heavy-tailed (mean ≫ median, so a
+# few stressed bars dominate hour means), we rank on the **median** hourly cost.
+#
+# This ranking is **in-sample and descriptive**: the same month both picks the hours
+# and scores them, so `best ≤ uniform ≤ worst` holds by construction — read it as a
+# view of May-2025 seasonality, not a validated edge. As an independent check we also
+# report how well the model's hourly ordering agrees with **measured** slippage.
 
 # %%
-calib = df[df["sample"] == "calibrate"]
-evalu = df[df["sample"] == "evaluate"]
-
-calib_hour_cost = calib.groupby("hour")["expected_cost_bps"].median().sort_values()
-best_hours = calib_hour_cost.head(BEST_K_HOURS).index.tolist()    # cheapest in calibration
-worst_hours = calib_hour_cost.tail(BEST_K_HOURS).index.tolist()   # priciest in calibration
+hour_cost = df.groupby("hour")["expected_cost_bps"].median().sort_values()
+best_hours = hour_cost.head(BEST_K_HOURS).index.tolist()    # cheapest hours (in-sample)
+worst_hours = hour_cost.tail(BEST_K_HOURS).index.tolist()   # priciest hours (in-sample)
 
 
 def _hours(frame, hours):
     return frame if hours is None else frame[frame["hour"].isin(hours)]
 
 
-uni_eval = evalu["expected_cost_bps"]
+uniform_cost = df["expected_cost_bps"]
 schedule = pd.DataFrame(
     [
-        {"schedule": f"Best {BEST_K_HOURS} (calibrated)", "hours": sorted(best_hours),
-         "eval_mean_bps": _hours(evalu, best_hours)["expected_cost_bps"].mean(),
-         "eval_median_bps": _hours(evalu, best_hours)["expected_cost_bps"].median()},
+        {"schedule": f"Best {BEST_K_HOURS} hours", "hours": sorted(best_hours),
+         "mean_bps": _hours(df, best_hours)["expected_cost_bps"].mean(),
+         "median_bps": _hours(df, best_hours)["expected_cost_bps"].median()},
         {"schedule": "Uniform (all day)", "hours": "all 24",
-         "eval_mean_bps": uni_eval.mean(), "eval_median_bps": uni_eval.median()},
-        {"schedule": f"Worst {BEST_K_HOURS} (calibrated)", "hours": sorted(worst_hours),
-         "eval_mean_bps": _hours(evalu, worst_hours)["expected_cost_bps"].mean(),
-         "eval_median_bps": _hours(evalu, worst_hours)["expected_cost_bps"].median()},
+         "mean_bps": uniform_cost.mean(), "median_bps": uniform_cost.median()},
+        {"schedule": f"Worst {BEST_K_HOURS} hours", "hours": sorted(worst_hours),
+         "mean_bps": _hours(df, worst_hours)["expected_cost_bps"].mean(),
+         "median_bps": _hours(df, worst_hours)["expected_cost_bps"].median()},
     ]
 )
-schedule["eval_median_diff_vs_uniform"] = schedule["eval_median_bps"] - uni_eval.median()
+schedule["median_diff_vs_uniform"] = schedule["median_bps"] - uniform_cost.median()
 
-# Does the hour ranking persist out-of-sample, and does it agree with measured slippage?
-rank_stability = rank_corr(
-    calib.groupby("hour")["expected_cost_bps"].median(),
-    evalu.groupby("hour")["expected_cost_bps"].median(),
-)
+# Independent cross-check: does the model's hourly ranking agree with measured
+# slippage? (Both computed on the full month — this is not a train/test split.)
 slip_agreement = rank_corr(
     df.groupby("hour")["expected_cost_bps"].median(),
     df.groupby("hour")["slippage_bps_mean"].median(),
 )
 
-print(f"Out-of-sample schedule cost for a ${ORDER_NOTIONAL:,} order "
-      f"(hours chosen on days 1–{CALIBRATION_DAYS}, cost measured on the rest):")
+print(f"In-sample schedule cost for a ${ORDER_NOTIONAL:,} order (hours ranked on the full month):")
 print(schedule.to_markdown(index=False))
-print(f"\nHour-ranking persistence calibrate→evaluate (Spearman): {rank_stability:.2f}")
-print(f"Model vs measured-slippage hourly ranking (Spearman)  : {slip_agreement:.2f}")
-print("A gap that survives out-of-sample, positive persistence, and agreement with measured "
-      "slippage would together be real evidence; weak values are the honest one-month verdict.")
+print(f"\nModel vs measured-slippage hourly ranking (Spearman): {slip_agreement:.2f}")
 print(
-    "Read the eval MEDIAN column — the statistic we rank on: best "
-    f"{schedule['eval_median_bps'].iloc[0]:.4f} vs worst {schedule['eval_median_bps'].iloc[2]:.4f} bps "
-    "show no separation. The eval MEAN column may still order best < worst, but that ordering is "
-    "produced by a handful of stressed bars (the heavy tail that motivated median ranking) and, with "
-    f"persistence ≈ {rank_stability:.2f}, must not be read as schedule skill."
+    "Best ≤ uniform ≤ worst holds by construction here — the same month picks and scores the hours — "
+    "so read the table as a description of May-2025 seasonality, not a validated edge. The "
+    "measured-slippage agreement above is the independent check: a positive value means the model's "
+    "cheap hours were also cheap in realised slippage."
 )
 
 # %%
@@ -474,7 +457,7 @@ ax.bar(med.index, med.to_numpy(), color=colors,
        yerr=[med.to_numpy() - q25.to_numpy(), q75.to_numpy() - med.to_numpy()],
        error_kw={"elinewidth": 1, "alpha": 0.5}, capsize=3)
 ax.axhline(med.median(), color="#111827", linestyle="--", linewidth=1.2, label="Median across hours")
-ax.set_title(f"Median expected cost by hour with IQR bars (${ORDER_NOTIONAL:,}; green=calib-best, red=calib-worst)")
+ax.set_title(f"Median expected cost by hour with IQR bars (${ORDER_NOTIONAL:,}; green=cheapest, red=priciest)")
 ax.set_xlabel("Hour of day (UTC)")
 ax.set_ylabel("Expected cost (bps)")
 ax.legend(frameon=True)
@@ -493,7 +476,7 @@ df["liquidity_score"] = df[["score_spread", "score_depth", "score_impact", "scor
 # ## 8. Chart 4 — When to stand aside
 #
 # A cheap hour is not automatically a safe one. The scatter places each hour by mean
-# depth (x) against mean **|toxicity|** (y); the calibration-cheapest hours are
+# depth (x) against mean **|toxicity|** (y); the cheapest hours are
 # green, the priciest red. Because the cost model is ~98% impact term, "cheap vs
 # expensive" here is largely an *impact* ranking — depth and toxicity carry the
 # information cost alone misses, so watch the **high-|toxicity|** hours even when
@@ -520,11 +503,11 @@ plt.tight_layout()
 # %% [markdown]
 # ## Takeaways
 #
-# - **Prove the schedule out-of-sample, or not at all.** Picking and scoring hours
-#   on the same window is circular; the honest test is whether calibration-cheap
-#   hours stay cheap on held-out days (`rank_stability`) and line up with measured
-#   slippage (`slip_agreement`). One month rarely settles it — and saying so *is* the
-#   lesson about one-month seasonality.
+# - **This ranking is in-sample.** Picking and scoring the hours on the same month
+#   makes `best ≤ uniform ≤ worst` true by construction, so the gap describes
+#   May-2025 seasonality rather than proving a durable edge. The measured-slippage
+#   agreement (`slip_agreement`) is the independent cross-check; one month rarely
+#   settles it — and saying so *is* the lesson about one-month seasonality.
 # - **Rank on the median, not the mean.** The cost distribution is heavy-tailed, so a
 #   few stressed bars can flip an hour between "best" and "worst" under a mean.
 # - **Cost scales with order size, and BTC is deep.** The coverage table shows
@@ -532,7 +515,7 @@ plt.tight_layout()
 #   — and any schedule gap — grows with your notional; re-run with your own size.
 # - **Cheap is not always safe.** The cost model is impact-dominated; Chart 4's
 #   depth and |toxicity| carry the adverse-selection information cost alone misses.
-# - **Historical, not Live; fees cancel.** These bins are calibrated in-window;
+# - **Historical, not Live; fees cancel.** These hours are ranked in-window;
 #   operating forward needs Live data and full L2 history needs Prime. A constant
 #   taker fee shifts all schedules equally, so it is omitted here.
 #
