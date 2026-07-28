@@ -70,6 +70,7 @@ python notebooks/getting-started.py
 | `intro-derivatives` | Polished 5-minute BTC perpetual derivatives regime notebook (funding, OI, basis) |
 | `intro-l1-price` | Polished 5-minute BTC perpetual top-of-book microstructure notebook |
 | `backtest-funding` | Funding-aware perpetual backtest that isolates realised-funding PnL from price alpha |
+| `backtest-slippage` | Transaction-cost model from spread, impact, and measured slippage; how dynamic costs reshape a momentum backtest |
 
 ## Development
 
