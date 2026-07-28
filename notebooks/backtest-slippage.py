@@ -406,7 +406,8 @@ ax.plot(
 ax.set_title("Quoted spread distribution by hour of day")
 ax.set_xlabel("Hour of day (exchange / UTC time)")
 ax.set_ylabel("Spread (bps)")
-ax.set_ylim(0, df["spread_bps"].quantile(0.99))
+# Start the axis at the minimum observed spread (not 0) so the hourly distribution fills the panel.
+ax.set_ylim(df["spread_bps"].min(), df["spread_bps"].quantile(0.99))
 ax.legend(frameon=True)
 plt.tight_layout()
 
