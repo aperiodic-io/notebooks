@@ -60,6 +60,16 @@
 # settlement is therefore the rate as of that instant — captured by the **last bar
 # before** the settlement — and it is charged to the **position held into** it. We
 # implement exactly that convention below and cross-check the cadence.
+#
+# **Units matter here.** `funding_rate` is a **per-settlement** (per-8h) rate —
+# e.g. `0.0001` (1bp) means 1bp of notional changes hands at *that print*, not
+# over a year. All PnL below (Chart 2, Section 6, Chart 3) charges this raw
+# per-settlement value directly, since that is the actual cash flow. Wherever we
+# instead want a magnitude that is comparable across venues/instruments with
+# different settlement cadences, we **annualize** it as
+# `rate_annualized = rate_per_settlement × settlements_per_year` (3/day × 365 =
+# `SETTLEMENTS_PER_YEAR` = 1,095 for this venue) — never the other way around, and
+# never inside a PnL calculation.
 
 # %%
 from __future__ import annotations
@@ -101,6 +111,8 @@ END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
 
 # Binance USDT-M perp funding settles every 8 hours at these UTC hours.
 SETTLEMENT_HOURS = (0, 8, 16)
+# Settlements/year, for converting a per-print rate to an annualized (APR) one.
+SETTLEMENTS_PER_YEAR = len(SETTLEMENT_HOURS) * 365
 # Lookback (bars) for the direction-neutral toy momentum comparison; 12 bars = 1h.
 MOMENTUM_LOOKBACK = 12
 # Near-zero band (bps) for shading the funding regime chart.
@@ -269,6 +281,7 @@ df["settled_rate"] = df["funding_rate_ff"].shift(1)  # valid at settlement bars
 
 settled = df.loc[df["is_settlement"], ["time", "settled_rate"]].dropna().reset_index(drop=True)
 settled["settled_rate_bps"] = settled["settled_rate"] * 1e4
+settled["settled_rate_annualized_pct"] = settled["settled_rate"] * SETTLEMENTS_PER_YEAR * 100
 
 # Cadence cross-check: settlements should be ~8h apart and number ~3/day.
 gaps_h = settled["time"].diff().dropna().dt.total_seconds() / 3600
@@ -278,7 +291,8 @@ coverage = pd.Series(
         "Settlements detected": len(settled),
         "Expected (~3/day)": round(len(df) * 5 / (60 * 8)),
         "Median gap between settlements (h)": gaps_h.median() if len(gaps_h) else np.nan,
-        "Mean settled funding (bps)": settled["settled_rate_bps"].mean(),
+        "Mean settled funding, per print (bps)": settled["settled_rate_bps"].mean(),
+        "Mean settled funding, annualized (%)": settled["settled_rate_annualized_pct"].mean(),
         "Share of positive settlements": (settled["settled_rate"] > 0).mean(),
     }
 )
@@ -299,7 +313,10 @@ print(
 #
 # The funding feed updates within each window, so we draw the raw rate as a thin
 # line and mark the **settled** value at each 8-hour print. Positive (longs pay),
-# negative (shorts pay), and near-zero regimes are shaded.
+# negative (shorts pay), and near-zero regimes are shaded. The left axis is the
+# **per-print** rate actually exchanged at each settlement; the right axis is the
+# same series **annualized** (`× SETTLEMENTS_PER_YEAR`) purely for scale — it is
+# not itself a cash flow.
 
 # %%
 df["funding_rate_bps"] = df["funding_rate_ff"] * 1e4
@@ -310,9 +327,13 @@ ax.axhspan(-FUNDING_ZERO_BAND_BPS, FUNDING_ZERO_BAND_BPS, color="#6b7280", alpha
 ax.plot(df["time"], df["funding_rate_bps"], color="#c4b5fd", linewidth=0.7, label="Reported rate (5m)")
 ax.scatter(settled["time"], settled["settled_rate_bps"], s=18, color="#4c1d95", zorder=5, label="Settled print (8h)")
 ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
-ax.set_title("Funding rate regimes (bps) — red: longs pay · green: shorts pay · grey: near zero")
-ax.set_ylabel("Funding rate (bps)")
+ax.set_title("Funding rate regimes (bps per print) — red: longs pay · green: shorts pay · grey: near zero")
+ax.set_ylabel("Funding rate (bps per 8h print)")
 ax.legend(frameon=True)
+ax_ann = ax.twinx()
+ax_ann.set_ylim(np.array(ax.get_ylim()) * SETTLEMENTS_PER_YEAR / 100)
+ax_ann.set_ylabel("Annualized (%)")
+ax_ann.grid(False)
 format_time_axis(ax)
 plt.tight_layout()
 
@@ -461,6 +482,11 @@ print(
 # - **Accrue at the settlement, to the position held into it.** Funding is charged
 #   at the 8-hour prints using the pre-settlement rate — not smeared across every
 #   5-minute bar and not attributed to a position entered after the print.
+# - **`funding_rate` is a per-print rate, annualize it only for display.** A print
+#   of 1bp is 1bp of notional at that settlement (~11%/year at 3 prints/day), not
+#   1bp/year — every PnL figure above charges the raw per-print value; the
+#   annualized (%) figures (coverage table, Chart 1's right axis) are for scale
+#   comparisons only and never feed back into a cash-flow calculation.
 # - **Realised, not predicted.** Everything here accounts for prints that already
 #   happened; the catalogue has no predicted-funding metric.
 # - **One month proves nothing.** The figures — including the fade-funding
