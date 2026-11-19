@@ -1,0 +1,14 @@
+{
+ "nvda_sunday_3am_et": {
+  "bars": 444,
+  "distinct_mids": 354
+ },
+ "oracle_changed_share_by_session": {
+  "overnight": 0.963281739144218,
+  "premarket": 0.9750075973518901,
+  "regular": 0.9908888867195762,
+  "afterhours": 0.9405719794684902,
+  "weekend": 0.7190959182053916,
+  "holiday": 0.7862451621741959
+ }
+}

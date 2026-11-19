@@ -1,0 +1,281 @@
+{
+ "symbols": [
+  "AAPL",
+  "AMD",
+  "AMZN",
+  "CBRS",
+  "COIN",
+  "CRCL",
+  "CRWV",
+  "GOOGL",
+  "HOOD",
+  "INTC",
+  "LITE",
+  "META",
+  "MRNA",
+  "MRVL",
+  "MSFT",
+  "MSTR",
+  "MU",
+  "NBIS",
+  "NVDA",
+  "ORCL",
+  "PLTR",
+  "RKLB",
+  "SNDK",
+  "SOXL",
+  "SP500",
+  "SPCX",
+  "TSLA",
+  "XYZ100"
+ ],
+ "first_bar": {
+  "AAPL": "2026-02-01",
+  "AMD": "2026-03-01",
+  "AMZN": "2026-04-01",
+  "CBRS": "2026-07-01",
+  "COIN": "2026-02-01",
+  "CRCL": "2026-02-01",
+  "CRWV": "2026-05-01",
+  "GOOGL": "2026-04-01",
+  "HOOD": "2026-01-01",
+  "INTC": "2026-01-01",
+  "LITE": "2026-08-01",
+  "META": "2026-04-01",
+  "MRNA": "2026-08-19",
+  "MRVL": "2026-07-01",
+  "MSFT": "2026-02-01",
+  "MSTR": "2026-03-01",
+  "MU": "2026-01-01",
+  "NBIS": "2026-08-01",
+  "NVDA": "2026-03-01",
+  "ORCL": "2026-02-01",
+  "PLTR": "2026-01-01",
+  "RKLB": "2026-06-01",
+  "SNDK": "2026-04-01",
+  "SOXL": "2026-08-10",
+  "SP500": "2026-06-01",
+  "SPCX": "2026-08-01",
+  "TSLA": "2026-01-01",
+  "XYZ100": "2026-04-01"
+ },
+ "bars_by_session": {
+  "afterhours": 203820,
+  "holiday": 34176,
+  "overnight": 411072,
+  "premarket": 280566,
+  "regular": 331654,
+  "weekend": 506580
+ },
+ "bars_total": 1767868,
+ "closed_test_bars_with_target": 823824,
+ "regular_test_bars_with_target": 288910,
+ "refits_closed": [
+  {
+   "train_rows": 128196,
+   "test_rows": 82944,
+   "threshold_bp": 6.20613530370877,
+   "month": 4,
+   "ic": 0.07500233227320288,
+   "trades": 39,
+   "net_bp": -5.627032389671262
+  },
+  {
+   "train_rows": 210180,
+   "test_rows": 96672,
+   "threshold_bp": 7.272289130161469,
+   "month": 5,
+   "ic": 0.08536821000748909,
+   "trades": 55,
+   "net_bp": 8.674605229469998
+  },
+  {
+   "train_rows": 299364,
+   "test_rows": 96768,
+   "threshold_bp": 8.054704965445927,
+   "month": 6,
+   "ic": 0.057491715909887345,
+   "trades": 64,
+   "net_bp": -4.588359107995762
+  },
+  {
+   "train_rows": 403044,
+   "test_rows": 108192,
+   "threshold_bp": 8.50991965312455,
+   "month": 7,
+   "ic": 0.04179454147423809,
+   "trades": 34,
+   "net_bp": 34.870342865539406
+  },
+  {
+   "train_rows": 510852,
+   "test_rows": 132480,
+   "threshold_bp": 9.338657453623847,
+   "month": 8,
+   "ic": 0.05597673436956833,
+   "trades": 18,
+   "net_bp": -7.381982602312634
+  },
+  {
+   "train_rows": 636996,
+   "test_rows": 129024,
+   "threshold_bp": 8.791063652413948,
+   "month": 9,
+   "ic": 0.04736828516477998,
+   "trades": 34,
+   "net_bp": 29.99706255799081
+  },
+  {
+   "train_rows": 771396,
+   "test_rows": 131712,
+   "threshold_bp": 8.352447654376508,
+   "month": 10,
+   "ic": 0.03270863575182508,
+   "trades": 48,
+   "net_bp": 23.809962388673938
+  },
+  {
+   "train_rows": 897732,
+   "test_rows": 46032,
+   "threshold_bp": 8.8760879533589,
+   "month": 11,
+   "ic": 0.024318278977422628,
+   "trades": 74,
+   "net_bp": 11.446197116749607
+  }
+ ],
+ "refits_regular": [
+  {
+   "train_rows": 42900,
+   "test_rows": 29484,
+   "threshold_bp": 7.6024968143282985,
+   "month": 4,
+   "ic": 0.011196515005730965,
+   "trades": 17,
+   "net_bp": -9.091784677668102
+  },
+  {
+   "train_rows": 71604,
+   "test_rows": 29640,
+   "threshold_bp": 9.475287354356961,
+   "month": 5,
+   "ic": 0.016102618410192126,
+   "trades": 34,
+   "net_bp": 2.6230757727800373
+  },
+  {
+   "train_rows": 104052,
+   "test_rows": 34398,
+   "threshold_bp": 14.382181801105668,
+   "month": 6,
+   "ic": -0.011843058803779588,
+   "trades": 111,
+   "net_bp": -12.947532495189787
+  },
+  {
+   "train_rows": 135174,
+   "test_rows": 39468,
+   "threshold_bp": 11.654062950932374,
+   "month": 7,
+   "ic": -0.016805597217144037,
+   "trades": 54,
+   "net_bp": -33.917687154137354
+  },
+  {
+   "train_rows": 174330,
+   "test_rows": 44536,
+   "threshold_bp": 8.50422414163111,
+   "month": 8,
+   "ic": 0.014815036136225802,
+   "trades": 18,
+   "net_bp": -36.31430666091317
+  },
+  {
+   "train_rows": 220270,
+   "test_rows": 45864,
+   "threshold_bp": 7.598256422142201,
+   "month": 9,
+   "ic": 0.022115474753721148,
+   "trades": 9,
+   "net_bp": -37.73996735538893
+  },
+  {
+   "train_rows": 263950,
+   "test_rows": 48048,
+   "threshold_bp": 6.700063679156007,
+   "month": 10,
+   "ic": 0.010044655372321515,
+   "trades": 57,
+   "net_bp": -87.17820495774141
+  },
+  {
+   "train_rows": 314182,
+   "test_rows": 17472,
+   "threshold_bp": 7.725532461511359,
+   "month": 11,
+   "ic": -0.024730883650661055,
+   "trades": 58,
+   "net_bp": -102.06125769405698
+  }
+ ],
+ "gain_share_closed_mean": {
+  "premium": 0.20081709892837474,
+  "book_imbalance": 0.23111663208690642,
+  "return_15m": 0.2691008376371259,
+  "index_return_15m": 0.2989654313475929
+ },
+ "gain_share_closed_range": {
+  "premium": [
+   0.11046445385008195,
+   0.2969351810576976
+  ],
+  "book_imbalance": [
+   0.17431227478242337,
+   0.36629248411482274
+  ],
+  "return_15m": [
+   0.19677794335901191,
+   0.40782123481125754
+  ],
+  "index_return_15m": [
+   0.0,
+   0.4343653420049351
+  ]
+ },
+ "closed_test_mean_target_bp": 0.12390761580640293,
+ "closed_test_share_target_positive": 0.4996091398162714,
+ "trades_closed": {
+  "n": 366,
+  "win_rate": 0.5737704918032787,
+  "long": {
+   "n": 342,
+   "net_bp": 10.222406873452435
+  },
+  "short": {
+   "n": 24,
+   "net_bp": 22.101823735226194
+  },
+  "hold_minutes_median": 15.0,
+  "hold_minutes_mean": 16.352459016393443,
+  "share_held_past_15m": 0.08743169398907104,
+  "share_hit_6h_cap": 0.0,
+  "spread_bp_at_entry_median": 1.951935401698357,
+  "abs_forecast_bp_at_entry_median": 8.829024786762856,
+  "symbols_traded": 27,
+  "days_with_trades": 126,
+  "features_at_entry_mean": {
+   "long": {
+    "premium": -61.746706524063676,
+    "book_imbalance": 0.3822020747618432,
+    "return_15m": -99.95966628718182,
+    "index_return_15m": -7.090666782988803
+   },
+   "short": {
+    "premium": 147.01725610702505,
+    "book_imbalance": -0.6274925509613312,
+    "return_15m": 132.3565724038933,
+    "index_return_15m": 2.9361721140230834
+   }
+  }
+ }
+}
