@@ -28,9 +28,10 @@
 # - has a reasonable distribution, ideally close to uniform
 # - is slow enough to survive transaction costs
 #
-# With no API key it runs end to end on preview data (single month - May 2025).
-# Supply your own key (below or via `APERIODIC_API_KEY`) to query your
-# subscription's full download window — just widen the `start_date`/`end_date`.
+# With no API key it runs end to end on the free preview slice (Binance BTC-USDT
+# perpetual, 5-minute bars, May 2025). With your own key (below or via
+# `APERIODIC_API_KEY`), a free account's included, it runs on Q3 2026 at hourly
+# bars; a paid plan can widen `START_DATE`/`END_DATE` further.
 #
 # ```text
 # +------------------+     +--------------+     +-----------------------------+
@@ -47,9 +48,11 @@
 # ## Setup — Configuration
 #
 # - **`rank_windows`** — look-back length for the rolling percentile-rank transform
-#   (longer windows produce slower, more stable signals).
+#   (longer windows produce slower, more stable signals). Set in days of history
+#   (1 to 16) and converted to bars of the chosen interval.
 # - **`smooth_windows`** — moving-average lengths applied to the ranked signal;
-#   `None` leaves it unsmoothed. This is the second search dimension.
+#   `None` leaves it unsmoothed. This is the second search dimension. Set in hours
+#   (4 to 32) and converted to bars.
 # - **`cost_bps`** — one-way transaction cost, in basis points, applied by the backtest.
 
 # %%
@@ -70,6 +73,18 @@ if API_KEY == "...":
 
 USE_PREVIEW = API_KEY == "DEMO-KEY"
 
+# The data window follows the key: the DEMO-KEY preview serves exactly one slice
+# (May 2025, 5-minute bars); your own key, a free account's included, gets Q3 2026
+# at hourly bars.
+if USE_PREVIEW:
+    INTERVAL = "5m"
+    START_DATE, END_DATE = datetime.date(2025, 5, 1), datetime.date(2025, 5, 31)
+else:
+    INTERVAL = "1h"
+    START_DATE, END_DATE = datetime.date(2026, 7, 1), datetime.date(2026, 9, 30)
+
+BARS_PER_HOUR = pd.Timedelta(hours=1) // pd.Timedelta(INTERVAL)
+
 
 @dataclass(frozen=True)
 class AlphaDiscoveryConfig:
@@ -80,6 +95,7 @@ class AlphaDiscoveryConfig:
     symbol: str
     exchange: str
     interval: str
+    bars_per_day: int
     timestamp: str
     start_date: datetime.date
     end_date: datetime.date
@@ -95,10 +111,11 @@ config = AlphaDiscoveryConfig(
     preview=USE_PREVIEW,
     symbol="perpetual-BTC-USDT:USDT",
     exchange="binance-futures",
-    interval="5m",
+    interval=INTERVAL,
+    bars_per_day=24 * BARS_PER_HOUR,
     timestamp="exchange",  # local timestamp or "true"
-    start_date=datetime.date(2025, 5, 1),
-    end_date=datetime.date(2025, 5, 31),
+    start_date=START_DATE,
+    end_date=END_DATE,
     metrics=[
         ("basis", "derivative"),
         ("funding", "derivative"),
@@ -116,8 +133,8 @@ config = AlphaDiscoveryConfig(
         ("vtwap", "regular"),
         ("range", "regular"),
     ],
-    rank_windows=[300, 600, 1200, 2400, 3600, 4800],
-    smooth_windows=[None, 50, 100, 200, 400],
+    rank_windows=[days * 24 * BARS_PER_HOUR for days in (1, 2, 4, 8, 12, 16)],
+    smooth_windows=[None, *(hours * BARS_PER_HOUR for hours in (4, 8, 16, 32))],
     max_smoothing_rank_ratio=1 / 3,
     cost_bps=1.0,
 )
@@ -141,6 +158,7 @@ def run_position_backtest(
     timestamps: pd.Series,
     position: np.ndarray,
     forward_return: np.ndarray,
+    bars_per_day: int,
     cost_bps_one_way: float = 0.0,
 ) -> tuple[pd.DataFrame, dict]:
     position = np.asarray(position, dtype=np.float64)
@@ -167,7 +185,7 @@ def run_position_backtest(
     drawdowns = (equity - running_max) / running_max
     max_drawdown_pct = float(np.min(drawdowns)) * 100.0
 
-    bars_per_year = 288 * 365
+    bars_per_year = bars_per_day * 365
     mean_ret = float(np.mean(net_pnl))
     std_ret = float(np.std(net_pnl, ddof=1)) if len(net_pnl) > 1 else 1.0
     annualized_sharpe = (
@@ -349,6 +367,7 @@ def evaluate_strategies(
                         np.clip(signal_valid * direction, -1.0, 1.0), nan=0.0
                     ),
                     forward_return=returns_valid,
+                    bars_per_day=config.bars_per_day,
                     cost_bps_one_way=config.cost_bps,
                 )
 
@@ -431,6 +450,7 @@ def build_strategy_artifacts(
         timestamps=panel_df.loc[mask, "time"],
         position=np.nan_to_num(np.clip(signal[mask], -1.0, 1.0), nan=0.0),
         forward_return=forward_returns[mask],
+        bars_per_day=config.bars_per_day,
         cost_bps_one_way=config.cost_bps,
     )
     return raw_signal, signal, bt_frame, bt_summary, mask
@@ -699,19 +719,21 @@ print(best_summary.to_markdown(index=False))
 # ---
 # ## Recap and Next Steps
 #
-# The exercise is using the preview data available, which is a single month in
-# 2025, and naturally it's easy to find a strategy that worked well for a short
-# period, especially when trying a hundred potential candidates, in sample.
+# The exercise uses a short window (a month of 5-minute bars on the preview slice,
+# or a quarter of hourly bars with a free account's key), and naturally it's easy
+# to find a strategy that worked well for a short period, especially when trying a
+# hundred potential candidates, in sample.
 #
-# Try out the subscriptions to get access to 4 years of historical data!
+# Try out the paid subscriptions to get access to 4 years of historical data!
 #
 # The next improvements to pursue are straightforward:
 #
 # - **Out-of-sample validation or walk-forward testing.** Re-run the selected
 #   configuration on later periods, or use a rolling train/test schedule, to check
 #   whether the edge survives beyond the in-sample window.
-# - **Using the full history.** Expand the sample beyond the current preview slice
-#   so the search covers multiple market regimes rather than one month of behavior.
+# - **Using the full history.** Expand the sample beyond the current window so the
+#   search covers multiple market regimes rather than a month or a quarter of
+#   behavior.
 # - **Signal ensembling.** The most obvious model improvement is to combine several
 #   strong signals into an ensemble, for example by averaging normalized signal
 #   values across complementary features instead of relying on one series alone.

@@ -29,12 +29,14 @@
 # cost for a directional (long-biased) position and nets out for a direction-neutral
 # one.
 #
-# We use **Binance BTC perpetuals** (`perpetual-BTC-USDT:USDT`) at **5-minute**
-# resolution over **May 2025**, the window served by the shared `DEMO-KEY` preview
-# slice.
+# We use **Binance BTC perpetuals** (`perpetual-BTC-USDT:USDT`). With no API key the
+# notebook runs on the free `DEMO-KEY` preview slice (**5-minute** bars, **May 2025**);
+# with your own key, a free account's included, it runs on **Q3 2026** at **hourly**
+# bars.
 #
-# > **One month is an illustration, not evidence.** The figures below are a worked
-# > example of *how funding enters PnL*, never proof of a durable edge.
+# > **One month, or one quarter, is an illustration, not evidence.** The figures
+# > below are a worked example of *how funding enters PnL*, never proof of a durable
+# > edge.
 #
 # **Background reading**
 # - Aperiodic derivatives metrics: https://aperiodic.io/metrics/derivatives
@@ -86,25 +88,14 @@ plt.rcParams["axes.spines.right"] = False
 # ## 2. Configuration
 #
 # Uppercase constants hold the public parameters. The API key resolves **inline
-# value → `APERIODIC_API_KEY` → `DEMO-KEY`**; with no key the notebook runs
-# end-to-end on the `DEMO-KEY` preview slice.
+# value → `APERIODIC_API_KEY` → `DEMO-KEY`**. With no key the notebook runs
+# end-to-end on the `DEMO-KEY` preview slice (May 2025, 5-minute bars); with your
+# own key it runs on Q3 2026 at hourly bars, the window a free account can pull.
 
 # %%
 EXCHANGE = "binance-futures"
 SYMBOL = "perpetual-BTC-USDT:USDT"
-INTERVAL = "5m"
-START_DATE = date(2025, 5, 1)
-END_DATE = date(2025, 5, 31)
 TIMESTAMP = "exchange"
-START_TS = pd.Timestamp(START_DATE)
-END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
-
-# Binance USDT-M perp funding settles every 8 hours at these UTC hours.
-SETTLEMENT_HOURS = (0, 8, 16)
-# Lookback (bars) for the direction-neutral toy momentum comparison; 12 bars = 1h.
-MOMENTUM_LOOKBACK = 12
-# Near-zero band (bps) for shading the funding regime chart.
-FUNDING_ZERO_BAND_BPS = 0.5
 
 API_KEY = "..."  # Set your key here, or via the APERIODIC_API_KEY env var
 if API_KEY == "...":
@@ -114,6 +105,27 @@ if API_KEY == "...":
 # key (above or via APERIODIC_API_KEY) to use the standard endpoint.
 USE_PREVIEW = API_KEY == "DEMO-KEY"
 
+# The data window follows the key: the preview serves exactly one slice, and a free
+# account's key gets Q3 2026 at hourly bars.
+if USE_PREVIEW:
+    INTERVAL, BAR_LABEL, PERIOD_LABEL = "5m", "5-minute", "May 2025"
+    START_DATE, END_DATE = date(2025, 5, 1), date(2025, 5, 31)
+else:
+    INTERVAL, BAR_LABEL, PERIOD_LABEL = "1h", "1-hour", "Q3 2026"
+    START_DATE, END_DATE = date(2026, 7, 1), date(2026, 9, 30)
+
+BARS_PER_HOUR = pd.Timedelta(hours=1) // pd.Timedelta(INTERVAL)
+BARS_PER_DAY = 24 * BARS_PER_HOUR
+START_TS = pd.Timestamp(START_DATE)
+END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
+
+# Binance USDT-M perp funding settles every 8 hours at these UTC hours.
+SETTLEMENT_HOURS = (0, 8, 16)
+# Lookback (bars) for the direction-neutral toy momentum comparison: one hour.
+MOMENTUM_LOOKBACK = BARS_PER_HOUR
+# Near-zero band (bps) for shading the funding regime chart.
+FUNDING_ZERO_BAND_BPS = 0.5
+
 print(f"Exchange / symbol : {EXCHANGE} / {SYMBOL}")
 print(f"Interval / window : {INTERVAL} | {START_DATE} → {END_DATE}")
 print(f"Mode              : {'preview (DEMO-KEY)' if USE_PREVIEW else 'standard endpoint'}")
@@ -122,8 +134,8 @@ print(f"Mode              : {'preview (DEMO-KEY)' if USE_PREVIEW else 'standard 
 # ## Helper functions
 #
 # `clip_window` and `format_time_axis` match the introductory notebooks;
-# `run_position_backtest` is the same 5-minute-annualised backtest used in
-# `most-predictive.py` and `alpha-discovery.py`; `funding_settlement_mask` marks the
+# `run_position_backtest` is the same backtest used in `most-predictive.py` and
+# `alpha-discovery.py`, annualised from `BARS_PER_DAY`; `funding_settlement_mask` marks the
 # 8-hour settlement bars (with a guarded stepwise fallback); and `audit_columns`
 # prints the fetched schema and fails loudly if a required field is absent.
 
@@ -174,7 +186,7 @@ def funding_settlement_mask(frame: pd.DataFrame) -> pd.Series:
     fr = frame["funding_rate"]
     changes = fr.notna() & fr.ne(fr.shift()) & fr.shift().notna()  # excludes row 0
     n_changes = int(changes.sum())
-    expected_windows = len(frame) * 5 / (60 * 8)  # 5m bars -> number of 8h windows
+    expected_windows = len(frame) / (8 * BARS_PER_HOUR)  # number of 8h windows
     if n_changes > 3 * expected_windows:
         raise ValueError(
             f"{n_changes} funding-rate changes across {len(frame)} bars looks like a "
@@ -190,7 +202,7 @@ def run_position_backtest(
     forward_return: np.ndarray,
     cost_bps_one_way: float | np.ndarray = 0.0,
 ) -> tuple[pd.DataFrame, dict]:
-    """Vectorised long/short backtest; annualisation assumes 5-minute bars."""
+    """Vectorised long/short backtest; annualised with ``BARS_PER_DAY`` bars a day."""
     position = np.asarray(position, dtype=np.float64)
     forward_return = np.asarray(forward_return, dtype=np.float64)
 
@@ -208,7 +220,7 @@ def run_position_backtest(
     drawdowns = (equity - running_max) / running_max
     max_drawdown_pct = float(np.min(drawdowns)) * 100.0
 
-    bars_per_year = 288 * 365
+    bars_per_year = BARS_PER_DAY * 365
     mean_ret = float(np.mean(net_pnl))
     std_ret = float(np.std(net_pnl, ddof=1)) if len(net_pnl) > 1 else 1.0
     annualized_sharpe = (mean_ret / std_ret) * np.sqrt(bars_per_year) if std_ret > 0 else 0.0
@@ -274,9 +286,9 @@ settled["settled_rate_bps"] = settled["settled_rate"] * 1e4
 gaps_h = settled["time"].diff().dropna().dt.total_seconds() / 3600
 coverage = pd.Series(
     {
-        "Rows (5m bars)": len(df),
+        f"Rows ({BAR_LABEL} bars)": len(df),
         "Settlements detected": len(settled),
-        "Expected (~3/day)": round(len(df) * 5 / (60 * 8)),
+        "Expected (~3/day)": round(len(df) / (8 * BARS_PER_HOUR)),
         "Median gap between settlements (h)": gaps_h.median() if len(gaps_h) else np.nan,
         "Mean settled funding (bps)": settled["settled_rate_bps"].mean(),
         "Share of positive settlements": (settled["settled_rate"] > 0).mean(),
@@ -284,7 +296,7 @@ coverage = pd.Series(
 )
 print(coverage.to_string())
 print(
-    "\nThe first in-window settlement (May 1, 00:00) has no pre-window bar, so its settled_rate "
+    f"\nThe first in-window settlement ({START_DATE:%b} {START_DATE.day}, 00:00) has no pre-window bar, so its settled_rate "
     "(funding_rate_ff.shift(1)) is NaN and it is dropped — the position holding into it was "
     "established before the window, so there is nothing to charge; hence detected = expected − 1."
 )
@@ -307,7 +319,7 @@ fig, ax = plt.subplots(figsize=(14, 6))
 ax.axhspan(FUNDING_ZERO_BAND_BPS, df["funding_rate_bps"].max(), color="#dc2626", alpha=0.06)
 ax.axhspan(df["funding_rate_bps"].min(), -FUNDING_ZERO_BAND_BPS, color="#16a34a", alpha=0.06)
 ax.axhspan(-FUNDING_ZERO_BAND_BPS, FUNDING_ZERO_BAND_BPS, color="#6b7280", alpha=0.10)
-ax.plot(df["time"], df["funding_rate_bps"], color="#c4b5fd", linewidth=0.7, label="Reported rate (5m)")
+ax.plot(df["time"], df["funding_rate_bps"], color="#c4b5fd", linewidth=0.7, label=f"Reported rate ({INTERVAL})")
 ax.scatter(settled["time"], settled["settled_rate_bps"], s=18, color="#4c1d95", zorder=5, label="Settled print (8h)")
 ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
 ax.set_title("Funding rate regimes (bps) — red: longs pay · green: shorts pay · grey: near zero")
@@ -335,7 +347,7 @@ fig, ax = plt.subplots(figsize=(14, 6))
 ax.plot(settled["time"], settled["cum_funding_unit_long_pct"], color="#2563eb", linewidth=1.6, marker="o", markersize=3)
 ax.fill_between(settled["time"], settled["cum_funding_unit_long_pct"], alpha=0.12, color="#2563eb")
 ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
-ax.set_title("Cumulative realised funding for a constant unit long (May 2025, illustrative)")
+ax.set_title(f"Cumulative realised funding for a constant unit long ({PERIOD_LABEL}, illustrative)")
 ax.set_ylabel("Cumulative funding (% of notional)")
 ax.text(
     0.01, 0.03,
@@ -354,7 +366,7 @@ print(f"Net funding for a constant unit long over the window: {settled['cum_fund
 #
 # 1. a **constant unit long** — a directional, long-biased position, and
 # 2. a **1-hour momentum** signal (sign of the mean return over `MOMENTUM_LOOKBACK`
-#    bars) — roughly direction-neutral across the month.
+#    bars) — roughly direction-neutral across the window.
 #
 # Funding is added by adjusting the return leg at the settlement bars only, charged
 # to the **position held into** each settlement (the bar before it), so turnover is
@@ -404,7 +416,7 @@ fig, ax = plt.subplots(figsize=(14, 6))
 frame_p, frame_f = curves["Constant long"]
 ax.plot(frame_p["timestamp"], frame_p["equity_curve"], color="#2563eb", linewidth=1.6, label="Constant long — price only")
 ax.plot(frame_f["timestamp"], frame_f["equity_curve"], color="#dc2626", linewidth=1.6, label="Constant long — price + funding")
-ax.set_title("Funding binds for a directional position (constant long, May 2025, illustrative)")
+ax.set_title(f"Funding binds for a directional position (constant long, {PERIOD_LABEL}, illustrative)")
 ax.set_ylabel("Equity (start = 1.0)")
 ax.legend(frameon=True, fontsize=11)
 format_time_axis(ax)
@@ -414,8 +426,8 @@ summary_table = pd.DataFrame(rows)
 print(summary_table.to_markdown(index=False))
 print(
     "\nfunding_contribution_pct is an additive approximation (sum of settlement cash flows); "
-    "returns compound, so it need not reconcile exactly with the return columns. Note the "
-    "direction-neutral momentum signal nets funding out almost entirely."
+    "returns compound, so it need not reconcile exactly with the return columns. Compare the two "
+    "rows: a position that flips direction tends to net funding out, a constant long does not."
 )
 
 # %% [markdown]
@@ -425,9 +437,10 @@ print(
 # conclusion — test `position = -sign(funding_rate)` (fade the crowd paying to
 # hold). The economic point is that the position **collects** the funding, so we
 # evaluate it **with the funding leg included** (`price + funding`) alongside the
-# price-only curve; the gap between them *is* the carry. With ~90% of prints
-# positive this month the position is nearly a constant **short**, so the price-only
-# curve is mostly inverse-BTC, not evidence about funding as a signal.
+# price-only curve; the gap between them *is* the carry. When most prints in the
+# window are positive (see the share in the coverage table above) the position is
+# nearly a constant **short**, so the price-only curve is mostly inverse-BTC, not
+# evidence about funding as a signal.
 
 # %%
 funding_ff = df["funding_rate_ff"]
@@ -447,24 +460,26 @@ ax.legend(frameon=True, fontsize=11)
 format_time_axis(ax)
 plt.tight_layout()
 print(
-    "Bridge to alpha research only — one month, one instrument, no costs, and ~constant short "
-    "in this window. See notebooks/alpha-discovery.py for the full search framework."
+    f"Bridge to alpha research only — {PERIOD_LABEL}, one instrument, no costs, and close to a constant "
+    "short whenever most prints are positive. See notebooks/alpha-discovery.py for the full search framework."
 )
 
 # %% [markdown]
 # ## Takeaways
 #
 # - **Funding is real PnL, and direction decides whether it binds.** For the
-#   constant long it is a first-order cost (Section 6, and the ~-0.43%/month in
-#   Chart 2); for the direction-neutral momentum signal it nets out almost entirely.
-#   A long-biased backtest that omits funding overstates its edge.
+#   constant long it is a direct cost whenever funding runs positive (Section 6, and
+#   the net figure printed under Chart 2); for a direction-neutral signal like the
+#   momentum one it largely nets out. A long-biased backtest that omits funding
+#   overstates its edge in a positive-funding market.
 # - **Accrue at the settlement, to the position held into it.** Funding is charged
 #   at the 8-hour prints using the pre-settlement rate — not smeared across every
-#   5-minute bar and not attributed to a position entered after the print.
+#   bar and not attributed to a position entered after the print. This works the
+#   same on 5-minute and hourly bars, since both line up with the 8-hour schedule.
 # - **Realised, not predicted.** Everything here accounts for prints that already
 #   happened; the catalogue has no predicted-funding metric.
-# - **One month proves nothing.** The figures — including the fade-funding
-#   diagnostic — are illustrative, not evidence of persistence.
+# - **One month, or one quarter, proves nothing.** The figures — including the
+#   fade-funding diagnostic — are illustrative, not evidence of persistence.
 #
 # ## Further reading
 # - [Improve your backtest](https://aperiodic.io/use-cases/improve-your-backtest)

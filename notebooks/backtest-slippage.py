@@ -37,14 +37,15 @@
 # > equally, whereas spread and impact vary with market state and order size — which
 # > is what this notebook is about.
 #
-# We study **Binance BTC perpetuals** (`perpetual-BTC-USDT:USDT`) at **5-minute**
-# resolution over **May 2025**, the window served by the shared `DEMO-KEY` preview
-# slice.
+# We study **Binance BTC perpetuals** (`perpetual-BTC-USDT:USDT`). With no API key
+# the notebook runs on the free `DEMO-KEY` preview slice (**5-minute** bars,
+# **May 2025**); with your own key, a free account's included, it runs on
+# **Q3 2026** at **hourly** bars.
 #
-# > **One month is an illustration, not evidence.** Every Sharpe ratio, return,
-# > and drawdown below comes from a single month of 5-minute data. Treat them as a
-# > worked example of *how costs change a backtest*, never as proof of a durable
-# > strategy.
+# > **One month, or one quarter, is an illustration, not evidence.** Every Sharpe
+# > ratio, return, and drawdown below comes from a single short window of data.
+# > Treat them as a worked example of *how costs change a backtest*, never as proof
+# > of a durable strategy.
 #
 # **Background reading**
 # - Aperiodic trade metrics: https://aperiodic.io/metrics/trades
@@ -130,16 +131,33 @@ plt.tight_layout()
 # Uppercase constants keep the public, non-sensitive parameters in one place. The
 # API key resolves in the order **inline value → `APERIODIC_API_KEY` → `DEMO-KEY`**.
 # With no key supplied, the notebook runs end-to-end on the `DEMO-KEY` preview
-# slice; supply your own key (inline or via the environment) to widen the window
-# against the standard endpoint.
+# slice (May 2025, 5-minute bars); with your own key (inline or via the
+# environment) it runs on Q3 2026 at hourly bars, the window a free account can pull.
 
 # %%
 EXCHANGE = "binance-futures"
 SYMBOL = "perpetual-BTC-USDT:USDT"
-INTERVAL = "5m"
-START_DATE = date(2025, 5, 1)
-END_DATE = date(2025, 5, 31)
 TIMESTAMP = "exchange"  # exchange-reported time
+
+API_KEY = "..."  # Set your key here, or via the APERIODIC_API_KEY env var
+if API_KEY == "...":
+    API_KEY = os.environ.get("APERIODIC_API_KEY", "DEMO-KEY")
+
+# Only the shared "DEMO-KEY" runs against the preview endpoint. Provide your own
+# key (above or via APERIODIC_API_KEY) to use the standard endpoint.
+USE_PREVIEW = API_KEY == "DEMO-KEY"
+
+# The data window follows the key: the preview serves exactly one slice, and a free
+# account's key gets Q3 2026 at hourly bars.
+if USE_PREVIEW:
+    INTERVAL, BAR_LABEL, PERIOD_LABEL = "5m", "5-minute", "May 2025"
+    START_DATE, END_DATE = date(2025, 5, 1), date(2025, 5, 31)
+else:
+    INTERVAL, BAR_LABEL, PERIOD_LABEL = "1h", "1-hour", "Q3 2026"
+    START_DATE, END_DATE = date(2026, 7, 1), date(2026, 9, 30)
+
+BARS_PER_HOUR = pd.Timedelta(hours=1) // pd.Timedelta(INTERVAL)
+BARS_PER_DAY = 24 * BARS_PER_HOUR
 START_TS = pd.Timestamp(START_DATE)
 END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
 
@@ -155,16 +173,11 @@ REFERENCE_TAKER_FEE_BPS = 5.0
 # Reference order size (USD notional) the dynamic-cost backtest is priced at. One
 # unit of the toy position is treated as this much notional (100% of equity).
 BACKTEST_NOTIONAL = 50_000
-# Lookback (bars) for the transparent toy momentum signal; 12 bars = 1 hour.
-MOMENTUM_LOOKBACK = 12
-
-API_KEY = "..."  # Set your key here, or via the APERIODIC_API_KEY env var
-if API_KEY == "...":
-    API_KEY = os.environ.get("APERIODIC_API_KEY", "DEMO-KEY")
-
-# Only the shared "DEMO-KEY" runs against the preview endpoint. Provide your own
-# key (above or via APERIODIC_API_KEY) to use the standard endpoint.
-USE_PREVIEW = API_KEY == "DEMO-KEY"
+# Lookback (bars) for the transparent toy momentum signal: one hour.
+MOMENTUM_LOOKBACK = BARS_PER_HOUR
+# Bars in the rolling realised-vol estimate: an hour of 5-minute bars, or six hourly
+# bars (a standard deviation needs more than one return).
+VOL_WINDOW = max(BARS_PER_HOUR, 6)
 
 print(f"Exchange / symbol : {EXCHANGE} / {SYMBOL}")
 print(f"Interval / window : {INTERVAL} | {START_DATE} → {END_DATE}")
@@ -176,7 +189,7 @@ print(f"Mode              : {'preview (DEMO-KEY)' if USE_PREVIEW else 'standard 
 #
 # `clip_window` and `format_time_axis` match the introductory notebooks;
 # `run_position_backtest` is the same transaction-cost-aware backtest used in
-# `most-predictive.py` and `alpha-discovery.py` (5-minute annualisation);
+# `most-predictive.py` and `alpha-discovery.py` (annualised from `BARS_PER_DAY`);
 # `expected_cost_bps` is the local, unit-documented cost model built in this
 # notebook; and `audit_columns` prints the fetched schema and fails loudly if a
 # required field is absent.
@@ -221,7 +234,7 @@ def run_position_backtest(
 ) -> tuple[pd.DataFrame, dict]:
     """Vectorised long/short backtest. `cost_bps_one_way` may be a scalar or a
     per-bar array (used for the dynamic, market-state-dependent cost model).
-    Annualisation assumes 5-minute bars (288 per day)."""
+    Annualised with ``BARS_PER_DAY`` bars a day."""
     position = np.asarray(position, dtype=np.float64)
     forward_return = np.asarray(forward_return, dtype=np.float64)
 
@@ -239,7 +252,7 @@ def run_position_backtest(
     drawdowns = (equity - running_max) / running_max
     max_drawdown_pct = float(np.min(drawdowns)) * 100.0
 
-    bars_per_year = 288 * 365
+    bars_per_year = BARS_PER_DAY * 365
     mean_ret = float(np.mean(net_pnl))
     std_ret = float(np.std(net_pnl, ddof=1)) if len(net_pnl) > 1 else 1.0
     annualized_sharpe = (mean_ret / std_ret) * np.sqrt(bars_per_year) if std_ret > 0 else 0.0
@@ -353,7 +366,8 @@ df["n_trades"] = df["taker_buy_count"] + df["taker_sell_count"]
 df["avg_trade_notional"] = df["volume_notional"] / df["n_trades"].replace(0, np.nan)
 
 df["ret"] = df["close"].pct_change()
-df["realized_vol_1h_bps"] = df["ret"].rolling(12).std() * np.sqrt(12) * 1e4
+# Realised volatility scaled to one hour, in bps.
+df["realized_vol_1h_bps"] = df["ret"].rolling(VOL_WINDOW).std() * np.sqrt(BARS_PER_HOUR) * 1e4
 df["hour"] = df["time"].dt.hour
 
 coverage = pd.Series(
@@ -424,11 +438,11 @@ plt.tight_layout()
 # %%
 fig, (ax_sv, ax_lvl, ax_std) = plt.subplots(1, 3, figsize=(17, 5.5), gridspec_kw={"width_ratios": [2, 1.3, 0.8]})
 
-ax_sv.plot(df["time"], df["spread_bps"].rolling(288).mean(), color="#ea580c", linewidth=1.4, label="Spread (1d avg, bps)")
+ax_sv.plot(df["time"], df["spread_bps"].rolling(BARS_PER_DAY).mean(), color="#ea580c", linewidth=1.4, label="Spread (1d avg, bps)")
 ax_sv.set_ylabel("Spread (bps)", color="#ea580c")
 ax_sv.tick_params(axis="y", labelcolor="#ea580c")
 ax_sv_vol = ax_sv.twinx()
-ax_sv_vol.plot(df["time"], df["realized_vol_1h_bps"].rolling(288).mean(), color="#2563eb", linewidth=1.4, label="Realised vol (1d avg, bps)")
+ax_sv_vol.plot(df["time"], df["realized_vol_1h_bps"].rolling(BARS_PER_DAY).mean(), color="#2563eb", linewidth=1.4, label="Realised vol (1d avg, bps)")
 ax_sv_vol.set_ylabel("Realised vol (bps)", color="#2563eb")
 ax_sv_vol.tick_params(axis="y", labelcolor="#2563eb")
 ax_sv_vol.grid(False)
@@ -540,11 +554,12 @@ calibration
 # flow (`|return| / |net notional|`), while measured slippage is realised *per-trade*
 # book-walk; they are related impact measures but not the same quantity, so the
 # model is best treated as an **order-of-magnitude impact proxy**, not a calibrated
-# per-trade predictor. Read the numbers straight: in this window the model
-# **under-predicts** measured per-trade slippage by roughly an **order of magnitude**
-# at the average trade size (the "level miss" ratio above) with **~zero per-bar
-# correlation** — the "order-of-magnitude proxy" label is meant literally, not as a
-# hedge. The "notional where model mean = measured" line shows that any apparent
+# per-trade predictor. Read the numbers straight: when the "level miss" ratio above
+# is far from 1 and the per-bar correlation is near zero, as they were on the May
+# 2025 preview slice when this notebook was written, the model **under-predicts**
+# measured per-trade slippage at the average trade size and the
+# "order-of-magnitude proxy" label is meant literally, not as a hedge. Check both
+# numbers for the window you ran. The "notional where model mean = measured" line shows that any apparent
 # agreement between a half-spread-inclusive $50k cost and measured slippage is a
 # coincidence of that chosen size, not evidence of calibration. A deployable model
 # would recalibrate the coefficient against measured slippage at its own order size.
@@ -587,7 +602,7 @@ dyn_v = np.asarray(dynamic_cost_bps)[valid]
 n_flips = int((np.abs(np.diff(pos_v, prepend=0.0)) > 0).sum())
 turnover_units = float(np.abs(np.diff(pos_v, prepend=0.0)).sum())
 turnover_usd = turnover_units * BACKTEST_NOTIONAL
-print(f"Signal traded {n_flips} times over the month = {turnover_units:.0f} units of turnover "
+print(f"Signal traded {n_flips} times over {PERIOD_LABEL} = {turnover_units:.0f} units of turnover "
       f"≈ ${turnover_usd:,.0f} traded on ${BACKTEST_NOTIONAL:,} of equity.")
 
 scenarios = {
@@ -609,7 +624,7 @@ for label, (cost, color) in scenarios.items():
             "max_drawdown_pct": summ["max_drawdown_pct"],
         }
     )
-ax.set_title("Same momentum signal, three microstructure-cost assumptions (May 2025, illustrative)")
+ax.set_title(f"Same momentum signal, three microstructure-cost assumptions ({PERIOD_LABEL}, illustrative)")
 ax.set_ylabel("Equity (start = 1.0)")
 ax.legend(frameon=True, fontsize=11)
 format_time_axis(ax)
@@ -617,7 +632,7 @@ plt.tight_layout()
 
 summary_table = pd.DataFrame(rows)
 print(summary_table.to_markdown(index=False))
-print("\nNote: annualised Sharpe from one month of 5-minute data is shown for comparability "
+print(f"\nNote: annualised Sharpe from {PERIOD_LABEL} of {BAR_LABEL} data is shown for comparability "
       "across scenarios only — it is not a meaningful annual estimate.")
 
 # %% [markdown]
@@ -632,13 +647,14 @@ print("\nNote: annualised Sharpe from one month of 5-minute data is shown for co
 #   proxy for the microstructure component.
 # - **Measured slippage is a check, not a free calibration.** Section 6 compares the
 #   impact term at the *actual* average trade size against measured `slippage_bps_mean`;
-#   the correlation is weak and the level only matches under a specific size
-#   assumption, so treat `impact_per_notional` as an order-of-magnitude impact proxy.
+#   where the correlation is weak and the level only matches under a specific size
+#   assumption, treat `impact_per_notional` as an order-of-magnitude impact proxy.
 # - **Fees dominate for takers.** Everything here is fee-free microstructure; a real
 #   taker adds ~`REFERENCE_TAKER_FEE_BPS` bps per clip, which for a market-order
 #   strategy is the largest cost of all.
-# - **One month proves nothing.** These Sharpe/return/drawdown figures are a worked
-#   example of how costs reshape a backtest, not evidence of an edge.
+# - **One month, or one quarter, proves nothing.** These Sharpe/return/drawdown
+#   figures are a worked example of how costs reshape a backtest, not evidence of an
+#   edge.
 #
 # ## Further reading
 # - [Improve your backtest](https://aperiodic.io/use-cases/improve-your-backtest)

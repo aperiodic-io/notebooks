@@ -1,6 +1,9 @@
 # ---
 # jupyter:
+#   aperiodic:
+#     uses_preview_data: true
 #   jupytext:
+#     notebook_metadata_filter: aperiodic
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -16,7 +19,8 @@
 # # Intro to Aperiodic L1 Price Metrics
 #
 # This notebook explores **top-of-book (L1) pricing** with Aperiodic's `l1_price` metric for
-# **Binance BTC perpetuals** from **September 1, 2025** through **February 28, 2026** at **5-minute** granularity.
+# **Binance BTC perpetuals**. With no API key it runs on the free preview slice (**5-minute** bars,
+# **May 2025**); with your own key, a free account's included, it runs on **Q3 2026** at **hourly** bars.
 #
 # ## Why L1 data matters
 #
@@ -58,13 +62,7 @@ plt.rcParams["axes.spines.right"] = False
 
 EXCHANGE = "binance-futures"
 SYMBOL = "perpetual-BTC-USDT:USDT"
-INTERVAL = "5m"
-START_DATE = date(2025, 9, 1)
-END_DATE = date(2026, 2, 28)
-START_TS = pd.Timestamp(START_DATE)
-END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
-CHART_ZOOM_START = pd.Timestamp(date(2025, 10, 9))
-CHART_ZOOM_END = pd.Timestamp(date(2025, 10, 11))
+TIMESTAMP = "exchange"
 
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
@@ -75,6 +73,26 @@ if API_KEY == "...":
 # Only the shared "DEMO-KEY" runs against the preview endpoint. Provide your own
 # key (above or via APERIODIC_API_KEY) to use the standard endpoint.
 USE_PREVIEW = API_KEY == "DEMO-KEY"
+
+# The data window follows the key. The DEMO-KEY preview serves exactly one slice
+# (May 2025, 5-minute bars); your own key, a free account's included, gets Q3 2026
+# at hourly bars. The zoomed charts show 2 days of 5-minute bars or a week of hourly ones.
+if USE_PREVIEW:
+    INTERVAL, BAR_LABEL = "5m", "5-minute"
+    START_DATE, END_DATE = date(2025, 5, 1), date(2025, 5, 31)
+    CHART_ZOOM_START, CHART_ZOOM_END = date(2025, 5, 8), date(2025, 5, 10)
+    ZOOM_LABEL = "May 8–9, 2025"
+    FORWARD_BARS, FORWARD_LABEL = 3, "15-minute"
+else:
+    INTERVAL, BAR_LABEL = "1h", "1-hour"
+    START_DATE, END_DATE = date(2026, 7, 1), date(2026, 9, 30)
+    CHART_ZOOM_START, CHART_ZOOM_END = date(2026, 8, 3), date(2026, 8, 10)
+    ZOOM_LABEL = "Aug 3–9, 2026"
+    FORWARD_BARS, FORWARD_LABEL = 1, "1-hour"
+
+BARS_PER_DAY = pd.Timedelta(days=1) // pd.Timedelta(INTERVAL)
+START_TS = pd.Timestamp(START_DATE)
+END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
 
 
 def clip_window(df: pd.DataFrame) -> pd.DataFrame:
@@ -99,7 +117,7 @@ price = clip_window(
     get_ohlcv(
         api_key=API_KEY,
         preview=USE_PREVIEW,
-        timestamp="true",
+        timestamp=TIMESTAMP,
         interval=INTERVAL,
         exchange=EXCHANGE,
         symbol=SYMBOL,
@@ -115,7 +133,7 @@ l1 = clip_window(
         api_key=API_KEY,
         preview=USE_PREVIEW,
         metric="l1_price",
-        timestamp="true",
+        timestamp=TIMESTAMP,
         interval=INTERVAL,
         exchange=EXCHANGE,
         symbol=SYMBOL,
@@ -132,11 +150,11 @@ l1["spread"] = l1["ask_price"] - l1["bid_price"]
 l1["spread_bps"] = (l1["spread"] / l1["midprice"]) * 10_000
 l1["weighted_mid_premium_bps"] = ((l1["weighted_midprice"] - l1["midprice"]) / l1["midprice"]) * 10_000
 l1["depth_imbalance"] = (l1["bid_amount"] - l1["ask_amount"]) / (l1["bid_amount"] + l1["ask_amount"])
-l1["rolling_spread_bps_1d"] = l1["spread_bps"].rolling(288).mean()
-l1["rolling_quote_updates_1d"] = l1["quote_update_frequency"].rolling(288).mean()
-l1["mid_return_5m_bps"] = l1["midprice"].pct_change() * 10_000
-l1["realized_vol_1d_bps"] = l1["mid_return_5m_bps"].rolling(288).std() * np.sqrt(288)
-l1["next_15m_return_bps"] = l1["midprice"].pct_change(3).shift(-3) * 10_000
+l1["rolling_spread_bps_1d"] = l1["spread_bps"].rolling(BARS_PER_DAY).mean()
+l1["rolling_quote_updates_1d"] = l1["quote_update_frequency"].rolling(BARS_PER_DAY).mean()
+l1["mid_return_bps"] = l1["midprice"].pct_change() * 10_000
+l1["realized_vol_1d_bps"] = l1["mid_return_bps"].rolling(BARS_PER_DAY).std() * np.sqrt(BARS_PER_DAY)
+l1["next_return_bps"] = l1["midprice"].pct_change(FORWARD_BARS).shift(-FORWARD_BARS) * 10_000
 
 summary = pd.Series(
     {
@@ -151,7 +169,9 @@ summary = pd.Series(
 )
 summary
 
-l1_zoom = l1.loc[(l1["time"] >= CHART_ZOOM_START) & (l1["time"] < CHART_ZOOM_END)].copy()
+l1_zoom = l1.loc[
+    (l1["time"] >= pd.Timestamp(CHART_ZOOM_START)) & (l1["time"] < pd.Timestamp(CHART_ZOOM_END))
+].copy()
 
 # %% [markdown]
 # ## Chart 1 — Midprice with the bid-ask band
@@ -169,7 +189,7 @@ ax.fill_between(
 ax.plot(l1_zoom["time"], l1_zoom["midprice"], color="#2563eb", linewidth=1.3, label="Midprice")
 ax.plot(l1_zoom["time"], l1_zoom["bid_price"], color="#16a34a", linewidth=0.8, alpha=0.7, label="Bid")
 ax.plot(l1_zoom["time"], l1_zoom["ask_price"], color="#dc2626", linewidth=0.8, alpha=0.7, label="Ask")
-ax.set_title("Midprice with quoted bid-ask band (Oct 9-10, 2025)")
+ax.set_title(f"Midprice with quoted bid-ask band ({ZOOM_LABEL})")
 ax.set_ylabel("Price (USDT)")
 ax.legend(frameon=True, ncol=3)
 format_time_axis(ax)
@@ -189,7 +209,7 @@ ax.plot(
     linewidth=1,
     alpha=0.8,
 )
-ax.set_title("Simple vs size-weighted midpoint (Oct 9-10, 2025)")
+ax.set_title(f"Simple vs size-weighted midpoint ({ZOOM_LABEL})")
 ax.legend(frameon=True)
 format_time_axis(ax)
 plt.tight_layout()
@@ -211,7 +231,7 @@ plt.tight_layout()
 # %%
 fig, ax = plt.subplots()
 ax.plot(l1["time"], l1["quote_update_frequency"], color="#0f766e", linewidth=1)
-ax.set_title("Quote update frequency per 5-minute bar")
+ax.set_title(f"Quote update frequency per {BAR_LABEL} bar")
 ax.set_ylabel("Updates")
 format_time_axis(ax)
 plt.tight_layout()
@@ -228,20 +248,22 @@ format_time_axis(ax)
 plt.tight_layout()
 
 # %% [markdown]
-# ## Chart 6 — Weighted-mid premium and next 15-minute returns
+# ## Chart 6 — Weighted-mid premium and the next return
+#
+# The forward horizon is 15 minutes on 5-minute bars and one hour on hourly bars.
 
 # %%
-scatter = l1[["weighted_mid_premium_bps", "next_15m_return_bps"]].dropna()
+scatter = l1[["weighted_mid_premium_bps", "next_return_bps"]].dropna()
 fig, ax = plt.subplots()
 sns.regplot(
     data=scatter.sample(min(len(scatter), 4000), random_state=7),
     x="weighted_mid_premium_bps",
-    y="next_15m_return_bps",
+    y="next_return_bps",
     scatter_kws={"alpha": 0.2, "s": 20, "color": "#7c3aed"},
     line_kws={"color": "#111827", "linewidth": 2},
     ax=ax,
 )
-ax.set_title("Weighted-mid premium vs next 15-minute return")
+ax.set_title(f"Weighted-mid premium vs next {FORWARD_LABEL} return")
 ax.set_xlabel("Weighted-mid premium (bps)")
 ax.set_ylabel("Forward return (bps)")
 plt.tight_layout()
@@ -253,7 +275,7 @@ plt.tight_layout()
 fig, ax = plt.subplots()
 ax.plot(l1_zoom["time"], l1_zoom["depth_imbalance"], color="#0891b2", linewidth=1)
 ax.axhline(0, color="black", linestyle="--", linewidth=0.8)
-ax.set_title("Depth imbalance at the best bid/ask")
+ax.set_title(f"Depth imbalance at the best bid/ask ({ZOOM_LABEL})")
 ax.set_ylabel("(bid size - ask size) / total size")
 format_time_axis(ax)
 plt.tight_layout()
