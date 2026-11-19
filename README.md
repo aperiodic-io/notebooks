@@ -41,7 +41,10 @@ Then open any of the new notebooks:
 .venv/bin/jupyter notebook notebooks/intro-flow.ipynb
 ```
 
-The new notebooks analyze Binance BTC perpetuals at **5-minute** resolution and read the API key from the environment when executed via `uv`.
+The notebooks analyze Binance BTC perpetuals (`perpetual-BTC-USDT:USDT`) and read the API key from the environment when executed via `uv`. The data window follows the key:
+
+- **No key:** the notebooks fall back to the shared `DEMO-KEY` and run on the free preview slice, **5-minute** bars for **May 2025**.
+- **Your own key**, a free account's included: they run on **Q3 2026** (July 1 to September 30) at **hourly** bars, the window a free account can pull.
 
 ### Jupyter / VS Code
 
@@ -66,9 +69,9 @@ python notebooks/getting-started.py
 | `getting-started` | OHLCV data fetching, charting, and basic flow metrics |
 | `derivatives` | Funding rates, open interest, and basis analysis |
 | `order-flow` | Taker flow, buy/sell imbalances, and cumulative delta |
-| `intro-flow` | Polished 5-minute BTC perpetual flow notebook using `.env` API key loading |
-| `intro-derivatives` | Polished 5-minute BTC perpetual derivatives regime notebook (funding, OI, basis) |
-| `intro-l1-price` | Polished 5-minute BTC perpetual top-of-book microstructure notebook |
+| `intro-flow` | BTC perpetual order-flow notebook using `.env` API key loading |
+| `intro-derivatives` | BTC perpetual derivatives regime notebook (funding, OI, basis) |
+| `intro-l1-price` | BTC perpetual top-of-book microstructure notebook |
 | `execution-liquidity-timing` | Time-of-day execution scheduling around multi-level L2 liquidity and flow toxicity |
 | `backtest-funding` | Funding-aware perpetual backtest that isolates realised-funding PnL from price alpha |
 | `backtest-slippage` | Transaction-cost model from spread, impact, and measured slippage; how dynamic costs reshape a momentum backtest |

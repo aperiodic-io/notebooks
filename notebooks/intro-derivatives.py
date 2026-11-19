@@ -20,8 +20,9 @@
 # # Intro to Aperiodic Derivatives Metrics
 #
 # This notebook introduces a simple **derivatives regime dashboard** using Aperiodic's
-# `funding`, `open_interest`, and `basis` metrics for **Binance BTC perpetuals** over
-# **September 1, 2025 → February 28, 2026** at **5-minute** frequency.
+# `funding`, `open_interest`, and `basis` metrics for **Binance BTC perpetuals**. With no API
+# key it runs on the free preview slice (**5-minute** bars, **May 2025**); with your own key,
+# a free account's included, it runs on **Q3 2026** at **hourly** bars.
 #
 # ## Why derivatives metrics matter
 #
@@ -61,11 +62,7 @@ plt.rcParams["axes.spines.right"] = False
 
 EXCHANGE = "binance-futures"
 SYMBOL = "perpetual-BTC-USDT:USDT"
-INTERVAL = "5m"
-START_DATE = date(2025, 9, 1)
-END_DATE = date(2026, 2, 28)
-START_TS = pd.Timestamp(START_DATE)
-END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
+TIMESTAMP = "exchange"
 
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
@@ -76,6 +73,21 @@ if API_KEY == "...":
 # Only the shared "DEMO-KEY" runs against the preview endpoint. Provide your own
 # key (above or via APERIODIC_API_KEY) to use the standard endpoint.
 USE_PREVIEW = API_KEY == "DEMO-KEY"
+
+# The data window follows the key. The DEMO-KEY preview serves exactly one slice
+# (May 2025, 5-minute bars); your own key, a free account's included, gets Q3 2026
+# at hourly bars.
+if USE_PREVIEW:
+    INTERVAL, BAR_LABEL = "5m", "5-minute"
+    START_DATE, END_DATE = date(2025, 5, 1), date(2025, 5, 31)
+else:
+    INTERVAL, BAR_LABEL = "1h", "1-hour"
+    START_DATE, END_DATE = date(2026, 7, 1), date(2026, 9, 30)
+
+BARS_PER_HOUR = pd.Timedelta(hours=1) // pd.Timedelta(INTERVAL)
+BARS_PER_DAY = 24 * BARS_PER_HOUR
+START_TS = pd.Timestamp(START_DATE)
+END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
 
 
 def clip_window(df: pd.DataFrame) -> pd.DataFrame:
@@ -104,7 +116,7 @@ price = clip_window(
     get_ohlcv(
         api_key=API_KEY,
         preview=USE_PREVIEW,
-        timestamp="true",
+        timestamp=TIMESTAMP,
         interval=INTERVAL,
         exchange=EXCHANGE,
         symbol=SYMBOL,
@@ -120,7 +132,7 @@ funding = clip_window(
         api_key=API_KEY,
         preview=USE_PREVIEW,
         metric="funding",
-        timestamp="true",
+        timestamp=TIMESTAMP,
         interval=INTERVAL,
         exchange=EXCHANGE,
         symbol=SYMBOL,
@@ -136,7 +148,7 @@ oi = clip_window(
         api_key=API_KEY,
         preview=USE_PREVIEW,
         metric="open_interest",
-        timestamp="true",
+        timestamp=TIMESTAMP,
         interval=INTERVAL,
         exchange=EXCHANGE,
         symbol=SYMBOL,
@@ -152,7 +164,7 @@ basis = clip_window(
         api_key=API_KEY,
         preview=USE_PREVIEW,
         metric="basis",
-        timestamp="true",
+        timestamp=TIMESTAMP,
         interval=INTERVAL,
         exchange=EXCHANGE,
         symbol=SYMBOL,
@@ -170,15 +182,16 @@ derivs = (
     .merge(basis, on="time", how="inner")
 )
 
-derivs["price_return_bps_1h"] = derivs["close"].pct_change(12) * 10_000
+derivs["price_return_bps_1h"] = derivs["close"].pct_change(BARS_PER_HOUR) * 10_000
 
 derivs["funding_rate_bps"] = derivs["funding_rate"] * 10_000
 for col in ["funding_rate_bps", "basis_bps", "open_interest"]:
-    derivs[f"{col}_z_1d"] = (derivs[col] - derivs[col].rolling(288).mean()) / derivs[col].rolling(288).std()
+    rolling_1d = derivs[col].rolling(BARS_PER_DAY)
+    derivs[f"{col}_z_1d"] = (derivs[col] - rolling_1d.mean()) / rolling_1d.std()
 
-derivs["oi_change_1h_pct"] = derivs["open_interest"].pct_change(12) * 100
+derivs["oi_change_1h_pct"] = derivs["open_interest"].pct_change(BARS_PER_HOUR) * 100
 
-derivs["next_1h_return_bps"] = derivs["close"].pct_change(12).shift(-12) * 10_000
+derivs["next_1h_return_bps"] = derivs["close"].pct_change(BARS_PER_HOUR).shift(-BARS_PER_HOUR) * 10_000
 
 derivs["stress_regime"] = (
     (derivs["funding_rate_bps_z_1d"] > 1.5)
@@ -225,7 +238,7 @@ plt.tight_layout()
 fig, ax = plt.subplots()
 ax.hist(derivs["funding_rate_bps"].dropna(), bins=80, color="#f97316", alpha=0.8, edgecolor="white")
 ax.axvline(0, color="black", linestyle="--", linewidth=1)
-ax.set_title("Distribution of 5-minute funding readings")
+ax.set_title(f"Distribution of {BAR_LABEL} funding readings")
 ax.set_xlabel("Funding rate (bps)")
 plt.tight_layout()
 
@@ -242,7 +255,7 @@ ax2 = ax1.twinx()
 ax2.plot(derivs["time"], derivs["open_interest"], color="#059669", linewidth=1, alpha=0.8, label="Open interest")
 ax2.set_ylabel("Open interest", color="#059669")
 ax1.set_title("Price and open interest")
-format_time_axis(ax)
+format_time_axis(ax1)
 plt.tight_layout()
 
 # %% [markdown]

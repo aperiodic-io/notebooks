@@ -1,6 +1,9 @@
 # ---
 # jupyter:
+#   aperiodic:
+#     uses_preview_data: true
 #   jupytext:
+#     notebook_metadata_filter: aperiodic
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -17,8 +20,9 @@
 #
 # This notebook introduces **order-flow analytics** with the `aperiodic` Python package.
 # We focus on a single large-cap instrument — **Binance BTC perpetuals**
-# (`perpetual-BTC-USDT:USDT`) — over the exact six-month window from **September 1, 2025**
-# through **February 28, 2026**, using **1-hour** observations.
+# (`perpetual-BTC-USDT:USDT`). With no API key it runs on the free preview slice
+# (**5-minute** bars, **May 2025**); with your own key, a free account's included, it runs on
+# **Q3 2026** at **hourly** bars.
 #
 # ## Why flow matters
 #
@@ -57,11 +61,7 @@ plt.rcParams["axes.spines.right"] = False
 
 EXCHANGE = "binance-futures"
 SYMBOL = "perpetual-BTC-USDT:USDT"
-INTERVAL = "1h"
-START_DATE = date(2025, 9, 1)
-END_DATE = date(2026, 2, 28)
-START_TS = pd.Timestamp(START_DATE)
-END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
+TIMESTAMP = "exchange"
 
 API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
 if API_KEY == "...":
@@ -72,6 +72,20 @@ if API_KEY == "...":
 # Only the shared "DEMO-KEY" runs against the preview endpoint. Provide your own
 # key (above or via APERIODIC_API_KEY) to use the standard endpoint.
 USE_PREVIEW = API_KEY == "DEMO-KEY"
+
+# The data window follows the key. The DEMO-KEY preview serves exactly one slice
+# (May 2025, 5-minute bars); your own key, a free account's included, gets Q3 2026
+# at hourly bars.
+if USE_PREVIEW:
+    INTERVAL, BAR_LABEL = "5m", "5-minute"
+    START_DATE, END_DATE = date(2025, 5, 1), date(2025, 5, 31)
+else:
+    INTERVAL, BAR_LABEL = "1h", "1-hour"
+    START_DATE, END_DATE = date(2026, 7, 1), date(2026, 9, 30)
+
+BARS_PER_DAY = pd.Timedelta(days=1) // pd.Timedelta(INTERVAL)
+START_TS = pd.Timestamp(START_DATE)
+END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
 
 
 def clip_window(df: pd.DataFrame) -> pd.DataFrame:
@@ -96,14 +110,14 @@ def pct_bps(series: pd.Series) -> pd.Series:
 # ## Fetch BTC OHLCV context and flow metrics
 #
 # Aperiodic's SDK downloads partitioned aggregates efficiently. We clip the returned frames to the exact
-# analysis window so the notebook stays on a strict six-month horizon.
+# analysis window so every chart covers the same dates.
 
 # %%
 price = clip_window(
     get_ohlcv(
         api_key=API_KEY,
         preview=USE_PREVIEW,
-        timestamp="true",
+        timestamp=TIMESTAMP,
         interval=INTERVAL,
         exchange=EXCHANGE,
         symbol=SYMBOL,
@@ -119,7 +133,7 @@ flow = clip_window(
         api_key=API_KEY,
         preview=USE_PREVIEW,
         metric="flow",
-        timestamp="true",
+        timestamp=TIMESTAMP,
         interval=INTERVAL,
         exchange=EXCHANGE,
         symbol=SYMBOL,
@@ -137,17 +151,17 @@ flow = flow.merge(price[["time", "close", "volume_notional"]], on="time", how="l
 flow["net_delta"] = flow["volume_delta"]
 flow["cumulative_delta"] = flow["net_delta"].cumsum()
 flow["net_delta_notional_m"] = flow["volume_delta_notional"] / 1_000_000
-flow["rolling_net_delta_1d"] = flow["net_delta_notional_m"].rolling(24).sum()
-flow["rolling_buy_sell_ratio_1d"] = flow["taker_buy_sell_ratio"].rolling(24).mean()
+flow["rolling_net_delta_1d"] = flow["net_delta_notional_m"].rolling(BARS_PER_DAY).sum()
+flow["rolling_buy_sell_ratio_1d"] = flow["taker_buy_sell_ratio"].rolling(BARS_PER_DAY).mean()
 flow["flow_toxicity_score"] = flow["flow_toxicity_score"].fillna(0)
 flow["large_trade_share"] = (
     flow["taker_buy_large_order_count"] + flow["taker_sell_large_order_count"]
 ) / (flow["taker_buy_count"] + flow["taker_sell_count"])
-flow["large_trade_share_1d"] = flow["large_trade_share"].rolling(24).mean()
-flow["next_1h_return_bps"] = pct_bps(flow["close"].pct_change(1).shift(-1))
+flow["large_trade_share_1d"] = flow["large_trade_share"].rolling(BARS_PER_DAY).mean()
+flow["next_bar_return_bps"] = pct_bps(flow["close"].pct_change(1).shift(-1))
 flow["abs_delta_zscore_1d"] = (
-    flow["net_delta_notional_m"].abs() - flow["net_delta_notional_m"].rolling(24).mean()
-) / flow["net_delta_notional_m"].rolling(24).std()
+    flow["net_delta_notional_m"].abs() - flow["net_delta_notional_m"].rolling(BARS_PER_DAY).mean()
+) / flow["net_delta_notional_m"].rolling(BARS_PER_DAY).std()
 
 summary = pd.Series(
     {
@@ -156,7 +170,7 @@ summary = pd.Series(
         "End": flow["time"].max(),
         "Mean buy/sell ratio": flow["taker_buy_sell_ratio"].mean(),
         "Median toxicity score": flow["flow_toxicity_score"].median(),
-        "Average 1h net delta (BTC)": flow["net_delta"].mean(),
+        f"Average {BAR_LABEL} net delta (BTC)": flow["net_delta"].mean(),
         "Average large-trade share": flow["large_trade_share"].mean(),
     }
 )
@@ -275,7 +289,7 @@ seasonality = seasonality.reindex(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Su
 
 fig, ax = plt.subplots(figsize=(16, 5))
 sns.heatmap(seasonality, cmap="RdBu_r", center=1.0, ax=ax)
-ax.set_title("Average 1-hour taker buy/sell ratio by weekday and hour")
+ax.set_title(f"Average {BAR_LABEL} taker buy/sell ratio by weekday and hour")
 ax.set_xlabel("Hour of day")
 ax.set_ylabel("")
 plt.tight_layout()
@@ -283,7 +297,7 @@ plt.tight_layout()
 # %% [markdown]
 # ## Takeaways
 #
-# - BTC perpetual flow is **highly bursty** even at a 1-hour horizon.
+# - BTC perpetual flow is **highly bursty**, whether you look at 5-minute or hourly bars.
 # - Cumulative delta helps separate short-lived noise from persistent aggressive buying/selling pressure.
 # - Large-trade participation and toxicity-style features add useful **microstructure context** beyond raw buy/sell volume.
 # - For practical trading research, flow is usually most useful **alongside price, liquidity, and derivatives positioning** rather than by itself.

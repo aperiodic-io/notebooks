@@ -12,6 +12,10 @@
 # arbitrary time series into a (close to) uniform distribution signal, and can
 # easily work as-is for simplistic backtests as well.
 #
+# With no API key it runs on the free preview slice (Binance BTC-USDT perpetual,
+# 5-minute bars, May 2025); with your own key, a free account's included, it runs on
+# Q3 2026 at hourly bars.
+#
 
 
 # %%
@@ -55,7 +59,7 @@ def run_position_backtest(
     drawdowns = (equity - running_max) / running_max
     max_drawdown_pct = float(np.min(drawdowns)) * 100.0
 
-    bars_per_year = 288 * 365
+    bars_per_year = BARS_PER_DAY * 365
     mean_ret = float(np.mean(net_pnl))
     std_ret = float(np.std(net_pnl, ddof=1)) if len(net_pnl) > 1 else 1.0
     annualized_sharpe = (
@@ -75,11 +79,31 @@ def run_position_backtest(
 
 SYMBOL = "perpetual-BTC-USDT:USDT"
 EXCHANGE = "binance-futures"
-INTERVAL = "5m"
 TIMESTAMP = "exchange"  # local timestamp or "true"
 
-START_DATE = datetime.date(2025, 5, 1)
-END_DATE = datetime.date(2025, 5, 31)
+API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
+if API_KEY == "...":
+    API_KEY = os.getenv("APERIODIC_API_KEY", "...")
+if API_KEY == "...":
+    API_KEY = "DEMO-KEY"
+
+# Without a key the notebook runs on the free preview slice: only the shared
+# "DEMO-KEY" runs against the preview endpoint, and only for May 2025 at 5-minute
+# bars. Your own key (above or via APERIODIC_API_KEY), a free account's included,
+# uses the standard endpoint, where we pull Q3 2026 at hourly bars.
+USE_PREVIEW = API_KEY == "DEMO-KEY"
+
+if USE_PREVIEW:
+    INTERVAL = "5m"
+    START_DATE = datetime.date(2025, 5, 1)
+    END_DATE = datetime.date(2025, 5, 31)
+else:
+    INTERVAL = "1h"
+    START_DATE = datetime.date(2026, 7, 1)
+    END_DATE = datetime.date(2026, 9, 30)
+
+BARS_PER_HOUR = pd.Timedelta(hours=1) // pd.Timedelta(INTERVAL)
+BARS_PER_DAY = 24 * BARS_PER_HOUR
 
 # For demonstration purposes, we'll use only the l2_imbalance metric category.
 METRICS = [
@@ -101,22 +125,10 @@ METRICS = [
     # ("range", "regular"),
 ]
 
-RANK_WINDOWS = [100, 300, 600, 1200]
+# Rolling-rank look-backs in hours of history (8h to 4 days), converted to bars.
+RANK_WINDOWS = [hours * BARS_PER_HOUR for hours in (8, 24, 48, 96)]
 COST_BPS = 0.0
 # Note: keeping a flat cost assumption here for a simple demo baseline.
-
-
-API_KEY = "..."  # Set via APERIODIC_API_KEY env var or .env file
-if API_KEY == "...":
-    API_KEY = os.getenv("APERIODIC_API_KEY", "...")
-if API_KEY == "...":
-    API_KEY = "DEMO-KEY"
-
-# Without a key the notebook runs on the free preview slice: only the shared
-# "DEMO-KEY" runs against the preview endpoint. Provide a key (above or via
-# APERIODIC_API_KEY) to use the standard endpoint and query your subscription's
-# full download window — just widen the dates above.
-USE_PREVIEW = API_KEY == "DEMO-KEY"
 
 
 def get_numeric_metric_frame(metric: str, kind: str) -> pd.DataFrame | None:

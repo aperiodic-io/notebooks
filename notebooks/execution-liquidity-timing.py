@@ -28,15 +28,16 @@
 # spreads are narrow, and flow is least toxic, then ranks the hours by modelled
 # execution cost and cross-checks that ranking against measured slippage.
 #
-# We study **Binance BTC perpetuals** (`perpetual-BTC-USDT:USDT`) at **5-minute**
-# resolution over **May 2025**, the window served by the shared `DEMO-KEY` preview
-# slice. The multi-level **L2** datasets are tier 3; they are included in the
-# preview slice, so this notebook runs in preview mode, but full L2 **history**
+# We study **Binance BTC perpetuals** (`perpetual-BTC-USDT:USDT`). With no API key
+# the notebook runs on the free `DEMO-KEY` preview slice (**5-minute** bars,
+# **May 2025**); with your own key, a free account's included, it runs on
+# **Q3 2026** at **hourly** bars. The multi-level **L2** datasets are tier 3; both
+# windows include them, so this notebook runs on either, but full L2 **history**
 # requires a Prime subscription.
 #
-# > **One month is an illustration, not evidence.** All cost differences and
-# > seasonality below come from a single month of 5-minute data. May 2025
-# > seasonality will not necessarily persist; treat every figure as illustrative.
+# > **One month, or one quarter, is an illustration, not evidence.** All cost
+# > differences and seasonality below come from a single short window. Seasonality
+# > in one window will not necessarily persist; treat every figure as illustrative.
 # > Exchange **fees** are omitted throughout: a constant per-clip taker fee shifts
 # > every schedule equally and cancels in the comparison, so it does not affect
 # > *which* hours are cheaper (it is central to `backtest-slippage.py`, though).
@@ -89,10 +90,26 @@ plt.rcParams["axes.spines.right"] = False
 # %%
 EXCHANGE = "binance-futures"
 SYMBOL = "perpetual-BTC-USDT:USDT"
-INTERVAL = "5m"
-START_DATE = date(2025, 5, 1)
-END_DATE = date(2025, 5, 31)
 TIMESTAMP = "exchange"  # exchange-reported (UTC) time
+
+API_KEY = "..."  # Set your key here, or via the APERIODIC_API_KEY env var
+if API_KEY == "...":
+    API_KEY = os.environ.get("APERIODIC_API_KEY", "DEMO-KEY")
+
+# Only the shared "DEMO-KEY" runs against the preview endpoint. Provide your own
+# key (above or via APERIODIC_API_KEY) to use the standard endpoint.
+USE_PREVIEW = API_KEY == "DEMO-KEY"
+
+# The data window follows the key: the preview serves exactly one slice (May 2025,
+# 5-minute bars), and a free account's key gets Q3 2026 at hourly bars.
+if USE_PREVIEW:
+    INTERVAL, BAR_LABEL, PERIOD_LABEL = "5m", "5-minute", "May 2025"
+    START_DATE, END_DATE = date(2025, 5, 1), date(2025, 5, 31)
+else:
+    INTERVAL, BAR_LABEL, PERIOD_LABEL = "1h", "1-hour", "Q3 2026"
+    START_DATE, END_DATE = date(2026, 7, 1), date(2026, 9, 30)
+
+BARS_PER_HOUR = pd.Timedelta(hours=1) // pd.Timedelta(INTERVAL)
 START_TS = pd.Timestamp(START_DATE)
 END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
 
@@ -103,16 +120,12 @@ BEST_K_HOURS = 4
 # Multi-depth L2 aggregation levels and the representative level for the heatmap.
 L2_LEVELS = [5, 10, 20, 25]
 DEPTH_LEVEL = 20
-# Minimum bars per (weekday, hour) cell before a seasonality cell is trusted.
+# Minimum bars per (weekday, hour) cell before a seasonality cell is trusted. A month
+# of 5-minute bars gives ~50 per cell; a quarter of hourly bars gives 13 or 14.
 MIN_CELL_BARS = 12
-
-API_KEY = "..."  # Set your key here, or via the APERIODIC_API_KEY env var
-if API_KEY == "...":
-    API_KEY = os.environ.get("APERIODIC_API_KEY", "DEMO-KEY")
-
-# Only the shared "DEMO-KEY" runs against the preview endpoint. Provide your own
-# key (above or via APERIODIC_API_KEY) to use the standard endpoint.
-USE_PREVIEW = API_KEY == "DEMO-KEY"
+# Bars in the rolling realised-vol estimate: an hour of 5-minute bars, or six hourly
+# bars (a standard deviation needs more than one return).
+VOL_WINDOW = max(BARS_PER_HOUR, 6)
 
 print(f"Exchange / symbol : {EXCHANGE} / {SYMBOL}")
 print(f"Interval / window : {INTERVAL} | {START_DATE} → {END_DATE}")
@@ -275,7 +288,7 @@ df["impact_coef_bps_per_usd"] = df["impact_per_notional"].replace([np.inf, -np.i
 df["expected_cost_bps"] = expected_cost_bps(df["half_spread_bps"], df["impact_coef_bps_per_usd"], ORDER_NOTIONAL)
 
 df["ret"] = df["close"].pct_change()
-df["realized_vol_1h_bps"] = df["ret"].rolling(12).std() * np.sqrt(12) * 1e4
+df["realized_vol_1h_bps"] = df["ret"].rolling(VOL_WINDOW).std() * np.sqrt(BARS_PER_HOUR) * 1e4  # hourly vol
 df["fwd_abs_move_bps"] = df["close"].pct_change().shift(-1).abs() * 1e4  # lagged features only
 df["hour"] = df["time"].dt.hour
 
@@ -285,7 +298,7 @@ df["hour"] = df["time"].dt.hour
 median_dollar_depth = df[f"dollar_depth_{DEPTH_LEVEL}"].median()
 coverage = pd.Series(
     {
-        "Rows (5m bars)": len(df),
+        f"Rows ({BAR_LABEL} bars)": len(df),
         "Median spread (bps)": df["spread_bps"].median(),
         f"Median depth L{DEPTH_LEVEL} (BTC)": df[f"depth_{DEPTH_LEVEL}"].median(),
         f"Median dollar depth L{DEPTH_LEVEL} ($)": median_dollar_depth,
@@ -302,7 +315,7 @@ coverage
 #
 # Median spread as an hour-of-day (columns) by day-of-week (rows) heatmap. Cells
 # with fewer than `MIN_CELL_BARS` observations are masked so the chart does not
-# imply precision the one-month sample cannot support.
+# imply precision the short sample cannot support.
 
 # %%
 spread_grid, spread_counts = season_pivot(df, "spread_bps", "median")
@@ -396,9 +409,9 @@ plt.tight_layout()
 # `BEST_K_HOURS`. Because the cost distribution is heavy-tailed (mean ≫ median, so a
 # few stressed bars dominate hour means), we rank on the **median** hourly cost.
 #
-# This ranking is **in-sample and descriptive**: the same month both picks the hours
+# This ranking is **in-sample and descriptive**: the same window both picks the hours
 # and scores them, so `best ≤ uniform ≤ worst` holds by construction — read it as a
-# view of May-2025 seasonality, not a validated edge. As an independent check we also
+# view of that window's seasonality, not a validated edge. As an independent check we also
 # report how well the model's hourly ordering agrees with **measured** slippage.
 
 # %%
@@ -427,24 +440,24 @@ schedule = pd.DataFrame(
 schedule["median_diff_vs_uniform"] = schedule["median_bps"] - uniform_cost.median()
 
 # Independent cross-check: does the model's hourly ranking agree with measured
-# slippage? (Both computed on the full month — this is not a train/test split.)
+# slippage? (Both computed on the full window — this is not a train/test split.)
 slip_agreement = rank_corr(
     df.groupby("hour")["expected_cost_bps"].median(),
     df.groupby("hour")["slippage_bps_mean"].median(),
 )
 
-print(f"In-sample schedule cost for a ${ORDER_NOTIONAL:,} order (hours ranked on the full month):")
+print(f"In-sample schedule cost for a ${ORDER_NOTIONAL:,} order (hours ranked on all of {PERIOD_LABEL}):")
 print(schedule.to_markdown(index=False))
 print(f"\nModel vs measured-slippage hourly ranking (Spearman): {slip_agreement:.2f}")
 print(
-    "Best ≤ uniform ≤ worst holds by construction here — the same month picks and scores the hours — "
-    "so read the table as a description of May-2025 seasonality, not a validated edge. The "
+    "Best ≤ uniform ≤ worst holds by construction here — the same window picks and scores the hours — "
+    f"so read the table as a description of {PERIOD_LABEL} seasonality, not a validated edge. The "
     "measured-slippage agreement above is the independent check: a positive value means the model's "
     "cheap hours were also cheap in realised slippage."
 )
 
 # %%
-# Dispersion: hourly median cost (full month) with inter-quartile error bars, so the
+# Dispersion: hourly median cost (full window) with inter-quartile error bars, so the
 # reader can see whether the best/worst hour means are separated or overlapping.
 hourly_cost = df.groupby("hour")["expected_cost_bps"]
 med = hourly_cost.median()
@@ -477,7 +490,7 @@ df["liquidity_score"] = df[["score_spread", "score_depth", "score_impact", "scor
 #
 # A cheap hour is not automatically a safe one. The scatter places each hour by mean
 # depth (x) against mean **|toxicity|** (y); the cheapest hours are
-# green, the priciest red. Because the cost model is ~98% impact term, "cheap vs
+# green, the priciest red. Because the cost model is almost all impact term, "cheap vs
 # expensive" here is largely an *impact* ranking — depth and toxicity carry the
 # information cost alone misses, so watch the **high-|toxicity|** hours even when
 # depth looks ample.
@@ -503,11 +516,11 @@ plt.tight_layout()
 # %% [markdown]
 # ## Takeaways
 #
-# - **This ranking is in-sample.** Picking and scoring the hours on the same month
-#   makes `best ≤ uniform ≤ worst` true by construction, so the gap describes
-#   May-2025 seasonality rather than proving a durable edge. The measured-slippage
-#   agreement (`slip_agreement`) is the independent cross-check; one month rarely
-#   settles it — and saying so *is* the lesson about one-month seasonality.
+# - **This ranking is in-sample.** Picking and scoring the hours on the same window
+#   makes `best ≤ uniform ≤ worst` true by construction, so the gap describes that
+#   window's seasonality rather than proving a durable edge. The measured-slippage
+#   agreement (`slip_agreement`) is the independent cross-check; one short window
+#   rarely settles it — and saying so *is* the lesson about short-sample seasonality.
 # - **Rank on the median, not the mean.** The cost distribution is heavy-tailed, so a
 #   few stressed bars can flip an hour between "best" and "worst" under a mean.
 # - **Cost scales with order size, and BTC is deep.** The coverage table shows
