@@ -25,9 +25,9 @@
 # receives **funding** at discrete settlement prints. A price-only backtest ignores
 # those cash flows and can misattribute carry to trading alpha, most of all for a
 # persistently **long** strategy in a rising, positive-funding market. This notebook
-# isolates realised funding and shows exactly where it binds: it is a first-order
-# cost for a directional (long-biased) position and nets out for a direction-neutral
-# one.
+# isolates realised funding and shows exactly where it binds: it is a persistent
+# cost for a directional (long-biased) position while funding runs positive, and it
+# nets out for a direction-neutral one.
 #
 # We use **Binance BTC perpetuals** (`perpetual-BTC-USDT:USDT`). With no API key the
 # notebook runs on the free `DEMO-KEY` preview slice (**5-minute** bars, **May 2025**);
@@ -337,7 +337,9 @@ plt.tight_layout()
 # > `funding_pnl = -position × settled_rate`   (position = +1 here)
 #
 # A downward-sloping curve means the long is *paying* to hold — carry a price-only
-# backtest never subtracts.
+# backtest never subtracts. On the Q3 2026 hourly run shown here funding was positive
+# at nearly every print (a share of 0.978182 in the coverage table above), so the
+# curve falls steadily, to -1.6323% of notional over the quarter.
 
 # %%
 settled = settled.copy()
@@ -471,7 +473,10 @@ print(
 #   constant long it is a direct cost whenever funding runs positive (Section 6, and
 #   the net figure printed under Chart 2); for a direction-neutral signal like the
 #   momentum one it largely nets out. A long-biased backtest that omits funding
-#   overstates its edge in a positive-funding market.
+#   overstates its edge in a positive-funding market. The drag can still be small next
+#   to the price move: on the Q3 2026 hourly run shown here funding took the constant
+#   long from 42.2787% (price only) to 39.9763%, while the momentum signal's funding
+#   contribution was -0.073608%.
 # - **Accrue at the settlement, to the position held into it.** Funding is charged
 #   at the 8-hour prints using the pre-settlement rate — not smeared across every
 #   bar and not attributed to a position entered after the print. This works the
