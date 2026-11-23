@@ -313,6 +313,8 @@ plt.tight_layout()
 #
 # - Funding, basis, and open interest are complementary measures of **leverage, crowding, and carry**.
 # - Persistent positive funding plus rich basis often signals an increasingly expensive long trade.
+#   The two do not always agree: on the Q3 2026 hourly run shown here mean funding is positive
+#   (0.6042 bps) while mean basis, the mark price against the index, is negative (-4.0569 bps).
 # - Rising open interest during a price move can indicate fresh positioning rather than mere price drift.
 # - The most useful regime read usually comes from **the combination** of these metrics, not any one series in isolation.
 #
