@@ -354,8 +354,8 @@ print(deciles_df)
 # over a 96-bar window, with a correlation of 0.023889 to the next bar's return and a
 # zero-cost Sharpe of 2.265850. Most of its equity gain comes from a few days in the
 # second half of August, and its deciles are not monotonic: the top decile's mean
-# next-bar return (0.000091) is below the bottom decile's (0.000248). That is a lead
-# to test out of sample, not an edge.
+# next-bar return is below the bottom decile's. That is a lead to test out of sample,
+# not an edge.
 #
 # - The signal presented here turns over quickly (see the signal panel above), so
 #   costs would cut into these results. Each run tests one bar size, so this notebook
