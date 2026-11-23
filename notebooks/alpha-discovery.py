@@ -34,14 +34,14 @@
 # bars; a paid plan can widen `START_DATE`/`END_DATE` further.
 #
 # ```text
-# +------------------+     +--------------+     +-----------------------------+
-# | Raw Metric       | --> | Smoothing    | --> | Rolling Rank Transformation |
-# +------------------+     +--------------+     +-----------------------------+
-#                                                   |
-#                                                   v
-#                                   +---------------------+     +----------------+
-#                                   | Long/Short Position | --> | Backtest       |
-#                                   +---------------------+     +----------------+
+# +------------------+     +-----------------------------+     +--------------+
+# | Raw Metric       | --> | Rolling Rank Transformation | --> | Smoothing    |
+# +------------------+     +-----------------------------+     +--------------+
+#                                                                      |
+#                                                                      v
+#                                    +----------------+     +---------------------+
+#                                    | Backtest       | <-- | Long/Short Position |
+#                                    +----------------+     +---------------------+
 # ```
 #
 # ---
@@ -620,19 +620,22 @@ print(panel[["time", "close", "fwd_ret"]].head().to_markdown(index=False))
 # ## Step 2 — Construct the signal
 #
 # A raw feature is not directly tradeable: its level is non-stationary and its units
-# are arbitrary. Two transforms address this:
+# are arbitrary. Two transforms address this, in this order:
 #
-# 1. **Smoothing (optional).** A moving average of `smooth_window` bars applied to
-#    the ranked signal trades responsiveness for stability; `None` leaves it
-#    unsmoothed.
-# 2. **Percentile rank.** Within a rolling window of `rank_window` bars, each value
+# 1. **Percentile rank.** Within a rolling window of `rank_window` bars, each value
 #    is replaced by its percentile rank and rescaled to `[-1, +1]`. A high value
 #    means "elevated relative to recent history," a low value the opposite — a
 #    scale-free measure that is comparable across features.
+# 2. **Smoothing (optional).** A moving average of `smooth_window` bars applied to
+#    the ranked signal trades responsiveness for stability; `None` leaves it
+#    unsmoothed.
 #
-# Smoothing is essential for alpha to survive even minimal transaction costs, when
-# one works with market microstructure / liquidity / flow metrics. They're simply
-# too high frequency to be traded as-is.
+# Smoothing helps alpha survive even minimal transaction costs when one works with
+# market microstructure / liquidity / flow metrics, which move too fast to be traded
+# as-is. On the Q3 2026 hourly run shown here every candidate in the two top-ten
+# tables below is smoothed, and the best feature's robustness heatmap puts the
+# unsmoothed column well below the 4- to 16-bar smoothing columns (the heaviest
+# smoothing, 32 bars, is weaker again).
 #
 # The position direction (long or short) is set by the sign of the in-sample
 # correlation between the signal and the one-bar-ahead return.
@@ -721,8 +724,13 @@ print(best_summary.to_markdown(index=False))
 #
 # The exercise uses a short window (a month of 5-minute bars on the preview slice,
 # or a quarter of hourly bars with a free account's key), and naturally it's easy
-# to find a strategy that worked well for a short period, especially when trying a
-# hundred potential candidates, in sample.
+# to find a strategy that worked well for a short period, especially when trying
+# many candidates in sample (on the Q3 2026 hourly run shown here, 166 features, each
+# over several window combinations). The best candidate there,
+# `oi_price_change_ratio`, shows an in-sample Sharpe of 6.86868 after the configured
+# `cost_bps`, and most of the ten best rows are that one feature with different
+# windows. A result that strong from a search this wide is a reason to test out of
+# sample, not a finding.
 #
 # Try out the paid subscriptions to get access to 4 years of historical data!
 #

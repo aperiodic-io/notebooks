@@ -1,13 +1,15 @@
 # %% [markdown]
 # # Predicting Short-Term Crypto Returns with Market Microstructure
 # #
-# There's a market microstructure metric that predicts short-term crypto returns
-# surprisingly well.
-# Most quants in this space know which one.
+# Order-book imbalance is a natural first candidate when looking for a market
+# microstructure metric that predicts short-term crypto returns.
 #
-# This notebook names it, walks through the methodology, and lets you run the same
-# analysis
-# to surface similar signals yourself.
+# This notebook ranks every `l2_imbalance` feature with a simple rolling-rank
+# backtest, names the best one in the window you run, walks through the methodology,
+# and lets you run the same analysis to surface similar signals yourself. The winner
+# is picked in sample from many feature and window combinations, so read its numbers
+# as a lead to test, not as proof that it predicts returns.
+#
 # Rolling percentile rank is a simple but effective transformation to transform an
 # arbitrary time series into a (close to) uniform distribution signal, and can
 # easily work as-is for simplistic backtests as well.
@@ -263,9 +265,11 @@ print(results_df)
 # %% [markdown]
 # ## Microstructure Takeaways
 #
-# Note that all of the backtests here are net of transaction costs.
+# Note that all of the backtests here assume zero transaction costs (`COST_BPS = 0.0`).
 #
-# - The metric presented here has high turnover and is most predictive on lower timeframes.
+# - The signal presented here turns over quickly (see the signal panel below), so
+#   costs would cut into these results. Each run tests one bar size, so this notebook
+#   does not show whether the signal is stronger on shorter or longer bars.
 # - Market microstructure metrics can be used to enhance directional strategies
 #   and extend existing signals.
 # - They can also act as regime filters to help decide when broader
@@ -344,9 +348,18 @@ print(deciles_df)
 # %% [markdown]
 # ## Next Steps
 #
-# Note that all of the backtests here are net of transaction costs.
+# Note that all of the backtests here assume zero transaction costs (`COST_BPS = 0.0`).
 #
-# - The metric presented here has high turnover and is most predictive on lower timeframes.
+# On the Q3 2026 hourly run shown here the best combination is `bid_ask_ratio_25_avg`
+# over a 96-bar window, with a correlation of 0.023889 to the next bar's return and a
+# zero-cost Sharpe of 2.265850. Most of its equity gain comes from a few days in the
+# second half of August, and its deciles are not monotonic: the top decile's mean
+# next-bar return is below the bottom decile's. That is a lead to test out of sample,
+# not an edge.
+#
+# - The signal presented here turns over quickly (see the signal panel above), so
+#   costs would cut into these results. Each run tests one bar size, so this notebook
+#   does not show whether the signal is stronger on shorter or longer bars.
 # - Market microstructure metrics can be used to enhance directional strategies
 #   and extend existing signals.
 # - They can also act as regime filters to help decide when broader

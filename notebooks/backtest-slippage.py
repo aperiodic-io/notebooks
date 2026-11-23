@@ -163,9 +163,10 @@ END_TS = pd.Timestamp(END_DATE) + pd.Timedelta(days=1)
 
 # Order sizes (USD notional) used for the expected-cost curves.
 ORDER_NOTIONALS = [10_000, 50_000, 100_000]
-# Flat one-way cost (bps) for the backtest's "flat" scenario. Chosen comparable to
-# the fee-free microstructure model so the equity chart stays readable; this is NOT
-# an all-in cost (a taker fee alone is several times larger — see REFERENCE_*).
+# Flat one-way cost (bps) for the backtest's "flat" scenario: a round benchmark, above
+# the modelled microstructure cost at BACKTEST_NOTIONAL (see the cost curve in
+# Section 6) and NOT an all-in cost (a taker fee alone is several times larger — see
+# REFERENCE_*).
 FLAT_COST_BPS = 1.0
 # Documented reference only (Binance USDT-M VIP0 taker), used in disclaimers — never
 # added into the modelled cost, which is microstructure-only by design.
@@ -295,7 +296,10 @@ def expected_cost_bps(
 # `output="pandas"`, `show_progress=False`). We fetch price (with notional
 # volume), top-of-book L1 prices, market-impact metrics, *measured* slippage, and
 # order **flow** (for the average trade size used to calibrate impact), then clip
-# each frame to the analysis window and join on `time`.
+# each frame to the analysis window and join on `time`. The join keeps only the bars
+# every request returned: on the Q3 2026 hourly run shown here the impact request
+# returns 1992 of the 2208 hourly bars, so a gap in early August drops out, and the
+# time-series charts below bridge it with a straight line.
 
 # %%
 COMMON = dict(
@@ -402,7 +406,10 @@ df[
 #
 # Spread is the floor on execution cost. Plotting its full hourly distribution
 # (not just an average) shows how much intraday variation a fixed cost assumption
-# would paper over.
+# would paper over. For BTC that can be very little: on the Q3 2026 hourly run shown
+# here the boxes barely move from hour to hour, because the quoted spread is narrow
+# and nearly the same at every hour. The variation that matters for cost is in the
+# impact term (Section 6).
 
 # %%
 fig, ax = plt.subplots(figsize=(15, 6))
@@ -428,9 +435,13 @@ plt.tight_layout()
 # %% [markdown]
 # ## 5. Chart 2 — Spread, volatility and measured slippage
 #
-# Execution cost co-moves with volatility. The left panel overlays the quoted
-# spread with rolling realised volatility. The middle panel shows the distribution
-# of the measured slippage **level** statistics (mean, median, p95, VWAP); the
+# Execution cost is expected to rise with volatility. The left panel overlays the
+# quoted spread with rolling realised volatility, both as one-day averages, so you can
+# see whether it does in the window you run. On the Q3 2026 hourly run shown here the
+# two do not move together: the spread steps down in the second half of August just
+# as volatility jumps to its high for the quarter, and the spread's two short spikes
+# are single bars carried through the one-day average. The middle panel shows the
+# distribution of the measured slippage **level** statistics (mean, median, p95, VWAP); the
 # right panel shows the **dispersion** statistic (`slippage_bps_std`) on its own
 # axis, since it is not comparable to a level. Measured slippage is the catalogue
 # ground truth we hold the impact model to in Section 6.
@@ -446,7 +457,7 @@ ax_sv_vol.plot(df["time"], df["realized_vol_1h_bps"].rolling(BARS_PER_DAY).mean(
 ax_sv_vol.set_ylabel("Realised vol (bps)", color="#2563eb")
 ax_sv_vol.tick_params(axis="y", labelcolor="#2563eb")
 ax_sv_vol.grid(False)
-ax_sv.set_title("Spread and realised vol move together")
+ax_sv.set_title("Spread and realised vol (1-day averages)")
 format_time_axis(ax_sv)
 
 level_long = df[slip_level_cols].melt(var_name="statistic", value_name="bps").dropna()
@@ -555,14 +566,21 @@ calibration
 # book-walk; they are related impact measures but not the same quantity, so the
 # model is best treated as an **order-of-magnitude impact proxy**, not a calibrated
 # per-trade predictor. Read the numbers straight: when the "level miss" ratio above
-# is far from 1 and the per-bar correlation is near zero, as they were on the May
-# 2025 preview slice when this notebook was written, the model **under-predicts**
+# is far from 1 and the per-bar correlation is near zero, the model **under-predicts**
 # measured per-trade slippage at the average trade size and the
-# "order-of-magnitude proxy" label is meant literally, not as a hedge. Check both
-# numbers for the window you ran. The "notional where model mean = measured" line shows that any apparent
-# agreement between a half-spread-inclusive $50k cost and measured slippage is a
-# coincidence of that chosen size, not evidence of calibration. A deployable model
-# would recalibrate the coefficient against measured slippage at its own order size.
+# "order-of-magnitude proxy" label is meant literally, not as a hedge. Both held on
+# the May 2025 preview slice when this notebook was written, and both hold on the
+# Q3 2026 hourly run shown here: measured slippage is 17.0941 times the model's mean
+# impact at the average trade size, and the per-bar correlation is -0.0048. A miss
+# that large is more than an order of magnitude, so on this run even the proxy label
+# is generous. Check both numbers for the window you ran.
+#
+# The "notional where model mean = measured" line shows that any apparent agreement
+# between a half-spread-inclusive $50k cost and measured slippage is a coincidence of
+# that chosen size, not evidence of calibration. On the run shown here the two meet at
+# $42,629.2296, close to the $50k clip, while the model is far off at the size of the
+# trades that measured slippage is made of. A deployable model would recalibrate the
+# coefficient against measured slippage at its own order size.
 
 # %% [markdown]
 # ## 7. Chart 3 — Cost assumptions change the backtest
@@ -641,10 +659,15 @@ print(f"\nNote: annualised Sharpe from {PERIOD_LABEL} of {BAR_LABEL} data is sho
 # - **Mid-price backtests flatter high-turnover signals.** The gap between the
 #   zero-cost curve and the cost-aware curves above is microstructure drag the paper
 #   backtest ignored; it scales with turnover, which the printed trade count makes
-#   concrete.
-# - **Spread and impact vary with market state.** Charts 1–2 show spread and
-#   volatility moving together by hour, so a single flat number is only ever a rough
-#   proxy for the microstructure component.
+#   concrete. Costs matter whether or not the strategy wins: on the Q3 2026 hourly run
+#   shown here the signal loses money even at zero cost (-8.8444%), and costs deepen
+#   the loss to -11.4596% with the modelled cost and -26.156% at a flat 1 bps.
+# - **Spread and impact vary with market state.** The mean modelled cost sits far
+#   above the median at every order size (Section 6), so a minority of bars carries
+#   much of the cost and a single flat number is only ever a rough proxy for the
+#   microstructure component. Do not assume the variation follows the clock or
+#   volatility: on the Q3 2026 hourly run shown here BTC's spread barely changes by
+#   hour (Chart 1) and does not track volatility (Chart 2).
 # - **Measured slippage is a check, not a free calibration.** Section 6 compares the
 #   impact term at the *actual* average trade size against measured `slippage_bps_mean`;
 #   where the correlation is weak and the level only matches under a specific size

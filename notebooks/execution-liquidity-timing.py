@@ -21,8 +21,8 @@
 #
 # **Use case: [Execute smarter](https://aperiodic.io/use-cases/execute-smarter)**
 #
-# Execution cost is not constant through the day. Spreads widen, depth thins, and
-# order flow turns adverse together around stressed periods. For a
+# Execution cost is not constant through the day. Around stressed periods spreads
+# can widen, depth can thin, and order flow can turn adverse. For a
 # moderate-frequency order, *when* you execute can matter more than shaving
 # microseconds off the route. This notebook measures when liquidity is deep,
 # spreads are narrow, and flow is least toxic, then ranks the hours by modelled
@@ -50,9 +50,13 @@
 # ## 1. Execution cost changes through time
 #
 # Spread, depth, volatility, and informed (toxic) flow are not independent. When
-# volatility spikes, market makers widen quotes and pull depth, and the flow that
-# trades against you is more likely to be informed. The result is that the *same*
-# order costs very different amounts depending on the hour.
+# volatility spikes, market makers tend to widen quotes and pull depth, and the flow
+# that trades against you is more likely to be informed. The result is that the
+# *same* order can cost very different amounts depending on when it is sent. Where
+# that variation shows up depends on the contract: on the Q3 2026 hourly run shown
+# here BTC's quoted spread barely moves (Chart 1), while the expected cost is
+# heavy-tailed (its mean, 0.3062 bps, is several times its median, 0.0444 bps), so the
+# variation is in the impact term rather than the spread.
 #
 # This is an exercise in **historical scheduling** for moderate-frequency
 # execution — choosing better windows from recurring conditions — not low-latency
@@ -121,7 +125,8 @@ BEST_K_HOURS = 4
 L2_LEVELS = [5, 10, 20, 25]
 DEPTH_LEVEL = 20
 # Minimum bars per (weekday, hour) cell before a seasonality cell is trusted. A month
-# of 5-minute bars gives ~50 per cell; a quarter of hourly bars gives 13 or 14.
+# of 5-minute bars gives ~50 per cell; a quarter of hourly bars gives 13 or 14, fewer
+# when a metric is missing for some days (the inner join below drops those hours).
 MIN_CELL_BARS = 12
 # Bars in the rolling realised-vol estimate: an hour of 5-minute bars, or six hourly
 # bars (a standard deviation needs more than one return).
@@ -292,9 +297,9 @@ df["realized_vol_1h_bps"] = df["ret"].rolling(VOL_WINDOW).std() * np.sqrt(BARS_P
 df["fwd_abs_move_bps"] = df["close"].pct_change().shift(-1).abs() * 1e4  # lagged features only
 df["hour"] = df["time"].dt.hour
 
-# At $50k the cost is almost entirely the impact term (half-spread is ~0.005 bps on
-# BTC), so the schedule numbers depend chiefly on impact_per_notional's ×1e4 unit —
-# verified against the catalogue definition above.
+# At $50k the cost is mostly the impact term (the half-spread is half of the tiny
+# median spread printed below), so the schedule numbers depend chiefly on
+# impact_per_notional's ×1e4 unit — verified against the catalogue definition above.
 median_dollar_depth = df[f"dollar_depth_{DEPTH_LEVEL}"].median()
 coverage = pd.Series(
     {
@@ -315,7 +320,10 @@ coverage
 #
 # Median spread as an hour-of-day (columns) by day-of-week (rows) heatmap. Cells
 # with fewer than `MIN_CELL_BARS` observations are masked so the chart does not
-# imply precision the short sample cannot support.
+# imply precision the short sample cannot support. On the Q3 2026 hourly run shown
+# here the Saturday and Sunday rows are blank, in this chart and in Chart 2: the
+# impact request returns 1992 of the 2208 hourly bars, the inner join in Section 3
+# drops the rest, and that leaves every weekend cell under the threshold.
 
 # %%
 spread_grid, spread_counts = season_pivot(df, "spread_bps", "median")
@@ -360,13 +368,18 @@ plt.tight_layout()
 # %% [markdown]
 # ## 6. Chart 3 — Volatility and adverse flow
 #
-# Execution risk is not only about nominal depth. The left panel overlays rolling
-# realised volatility with the average spread by hour. The right panel relates two
+# Execution risk is not only about nominal depth. The left panel overlays the median
+# realised volatility and the median spread by hour. The right panel relates two
 # **lagged** features — **|flow toxicity|** and the absolute L2 imbalance known
-# *before* the move — to the **next-bar** absolute move: bucketed into quintiles,
-# average subsequent moves rise with both. These are intensity diagnostics (the
-# signed toxicity is folded to its magnitude), not causal claims, and use only
-# lagged inputs.
+# *before* the move — to the **next-bar** absolute move, bucketed into quintiles. If
+# either carries adverse-selection information, average subsequent moves should rise
+# with it. These are intensity diagnostics (the signed toxicity is folded to its
+# magnitude), not causal claims, and use only lagged inputs.
+#
+# On the Q3 2026 hourly run shown here neither feature rises steadily: the top
+# |toxicity| quintile has the largest next-bar move, but the |imbalance| quintiles do
+# not rise at all (the top two are the lowest). In the left panel volatility and
+# spread do not track each other either.
 
 # %%
 fig, (ax_v, ax_t) = plt.subplots(1, 2, figsize=(16, 5.5))
@@ -381,7 +394,7 @@ ax_vs.plot(hourly.index, hourly["spread_bps"], color="#ea580c", linewidth=1.8, l
 ax_vs.set_ylabel("Spread (bps)", color="#ea580c")
 ax_vs.tick_params(axis="y", labelcolor="#ea580c")
 ax_vs.grid(False)
-ax_v.set_title("Volatility and spread by hour move together")
+ax_v.set_title("Volatility and spread by hour")
 
 labels = [f"Q{i}" for i in range(1, 6)]
 diag = df[["abs_toxicity", f"imbalance_{DEPTH_LEVEL}", "fwd_abs_move_bps"]].dropna().copy()
@@ -493,7 +506,8 @@ df["liquidity_score"] = df[["score_spread", "score_depth", "score_impact", "scor
 # green, the priciest red. Because the cost model is almost all impact term, "cheap vs
 # expensive" here is largely an *impact* ranking — depth and toxicity carry the
 # information cost alone misses, so watch the **high-|toxicity|** hours even when
-# depth looks ample.
+# depth looks ample. On the Q3 2026 hourly run shown here, hour 16 is one of the four
+# cheapest yet sits well above the median |toxicity| of the hours.
 
 # %%
 hour_scatter = df.groupby("hour").agg(
@@ -521,6 +535,9 @@ plt.tight_layout()
 #   window's seasonality rather than proving a durable edge. The measured-slippage
 #   agreement (`slip_agreement`) is the independent cross-check; one short window
 #   rarely settles it — and saying so *is* the lesson about short-sample seasonality.
+#   On the Q3 2026 hourly run shown here the agreement is 0.46, positive but far from
+#   a clean match, and the cheapest four hours beat the uniform schedule by only
+#   0.00486398 bps at the median, small next to any one hour's inter-quartile range.
 # - **Rank on the median, not the mean.** The cost distribution is heavy-tailed, so a
 #   few stressed bars can flip an hour between "best" and "worst" under a mean.
 # - **Cost scales with order size, and BTC is deep.** The coverage table shows

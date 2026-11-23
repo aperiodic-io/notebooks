@@ -286,7 +286,11 @@ plt.tight_layout()
 # - L1 data gives a compact view of **price, spread, and displayed liquidity**.
 # - Quote update frequency is a useful proxy for how mechanically active the book is.
 # - Weighted-mid deviations can add color on near-term pressure when one side of the book is relatively thicker.
-# - Even in a very liquid instrument like BTC perpetuals, spread and top-of-book size still vary meaningfully across the day.
+#   On the Q3 2026 hourly run shown here Chart 6 shows no clear relation at a one-hour horizon: the premium is a
+#   tiny fraction of a basis point and the fitted line is flat.
+# - Even in a very liquid instrument like BTC perpetuals, top-of-book size swings sharply from bar to bar (Chart 7).
+#   The quoted spread can be a different story: on the Q3 2026 hourly run shown here it stays nearly flat apart
+#   from two brief spikes (Chart 3).
 #
 # ## Further reading
 # - Aperiodic: https://aperiodic.io/
